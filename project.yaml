@@ -1,5 +1,3 @@
-workingpath: /home/vokimon/somenergia/
-
 ubuntuDependencies:
 - libxslt1-dev
 - python-dev
@@ -30,7 +28,6 @@ pipDependencies:
 # server
 - vatnumber
 - mako
-- reportlab
 - pydot
 - psycopg2
 - egenix-mx-base
@@ -51,7 +48,7 @@ pipDependencies:
 - marshmallow>2.0.0
 - egenix-mx-base
 - Python-Chart
-- reportlab==3.0
+- reportlab>=3.0
 - osconf
 - libcomxml<2.2.4
 - unidecode
@@ -109,31 +106,31 @@ repositories:
 - path: empowering
 - path: gestionatr
 - path: erp-empowering
-  author: Som-Energia
+  user: Som-Energia
 - path: amoniak
-  author: Som-Energia
+  user: Som-Energia
 - path: erppeek_wst
-  author: Som-Energia
+  user: Som-Energia
   branch: ws_transaction
 - path: somenergia-utils
-  author: Som-Energia
+  user: Som-Energia
 - path: factuae
-  author: totaler
+  user: totaler
 - path: erp
-  author: Som-Energia
+  user: Som-Energia
   branch: rolling
 - path: plantmeter
-  author: Som-Energia
+  user: Som-Energia
   tests:
   - nosetests plantmeter --verbose
   - nosetests scripts/
 - path: somenergia-generationkwh
-  author: Som-Energia
+  user: Som-Energia
   tests:
   - nosetests generationkwh --verbose
   - nosetests scripts/
 - path: sermepa # webforms
-  author: Som-Energia
+  user: Som-Energia
   tests:
   - ./setup.py test
 

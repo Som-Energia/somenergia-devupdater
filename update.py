@@ -17,6 +17,7 @@ def checkInVirtualEnvironment():
 
 checkInVirtualEnvironment()
 
+
 import subprocess
 from contextlib import contextmanager
 from yamlns import namespace as ns
@@ -66,6 +67,14 @@ def runTests(repo):
                 output = e.output,
             )
     return errors
+
+
+def downloadLastBackup():
+    import datetime
+    yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
+    backupfile = "somenergia-{}.sql.gz".format(yesterday)
+    runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
+    return backupfile
 
 def newCommitsFromRemote():
     errorcode, output = run(
@@ -175,12 +184,12 @@ def pendingPipUpgrades():
 
 def pipInstallUpgrade(packages):
     # TODO: notify as changes
-    step("Upgrading pip packages: {}", packages)
+    step("Upgrading pip packages: {}", ', '.join(packages))
     if not packages:
         warn("No pending pip upgrades")
         return
 
-    packages = ' '.join(p.name for p in packages)
+    packages = ' '.join(["'{}'".format(x) for x in packages])
     err, output = run('pip install --upgrade {}', packages)
     if err:
         error("Error upgrading pip packages")
@@ -201,8 +210,8 @@ def installCustomPdfGenerator():
 
 def deploy(p):
     aptInstall(p.ubuntuDependencies)
-    installCustomPdfGenerator()
-    pipInstallUpgrade((x.name for x in p.pipDependencies))
+    False and installCustomPdfGenerator()
+    pipInstallUpgrade(p.pipDependencies)
     for repository in p.repositories:
         clone(repository)
 
@@ -220,16 +229,23 @@ def deploy(p):
     systemUser = os.environment.get('USER')
     p.postgresUsers.append(systemUser)
     for user in p.postgresUsers:
+        # TODO: Postgres version in config path!!
         run("""sudo su -c 'echo "local   all       '{}'       peer" >> /etc/postgresql/9.5/main/pg_hba.conf'""",user)
         run("sudo -u postgres createuser -P -s {}", user)
 
+    backupfile = downloadLastBackup()
+
+    #run("createdb somenergia")
+    #run("zcat {} | psql -e somenergia", backupfile)
+    #run("""psql -d somenergia -c "UPDATE res_partner_address SET email = '{}'" """, c.email)
+
 
 def completeRepoData(repository):
-    repo.setdefault('branch', 'master')
-    repo.setdefault('gitauthor', 'gisce')
-    repo.setdefault('url',
-        'git+ssh://git@github.com/{gitauthor}/{path}.git'
-        .format(**repo))
+    repository.setdefault('branch', 'master')
+    repository.setdefault('user', 'gisce')
+    repository.setdefault('url',
+        'git+ssh://git@github.com/{user}/{path}.git'
+        .format(**repository))
 
 
 def clone(repository):
@@ -244,15 +260,22 @@ def installEditable(path):
 
 results=ns()
 p = ns.load("project.yaml")
+c = ns.load("config.yaml")
+try:
+    os.makedirs(c.workingpath)
+except OSError:
+    pass
 
-with cd(p.workingpath):
-    #deploy(p)
-    update(p, results, force=True)
-    testRepositories(p, results)
+with cd(c.workingpath):
+    deploy(p)
+    #update(p, results, force=True)
+    #testRepositories(p, results)
     #print(ns(packages=pendingPipUpgrades()).dump())
     #pipInstallUpgrade(pendingPipUpgrades())
-    results.dump("results.yaml")
-    print summary(results)
+
+
+results.dump("results.yaml")
+print summary(results)
 
 
 
