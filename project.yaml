@@ -1,0 +1,172 @@
+workingpath: /home/vokimon/somenergia/
+
+ubuntuDependencies:
+- libxslt1-dev
+- python-dev
+- libxml2-dev
+- zlib1g-dev
+- postgresql-server-dev-all
+- libjpeg-dev
+- redis-server
+- postgresql
+- libffi-dev
+- mongodb-server
+- virtualenvwrapper
+- gcc
+- g++
+- python-pip
+
+predeploy:
+- mkvirtualenv -p $(which python2) --system-site-packages erp
+- wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
+- sudo dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
+
+pipDependencies:
+# client
+- pytz
+- egenix-mx-base
+- ruamel.venvgtk
+- pyOpenSSL
+# server
+- vatnumber
+- mako
+- reportlab
+- pydot
+- psycopg2
+- egenix-mx-base
+- Babel
+- pymongo
+- rq
+- raven
+- sentry
+- psutil
+- times
+- xlwt
+- pysftp
+- redis
+- osconf
+- slugify
+- fuzzywuzzy
+- lockfile
+- marshmallow>2.0.0
+- egenix-mx-base
+- Python-Chart
+- reportlab==3.0
+- osconf
+- libcomxml<2.2.4
+- unidecode
+- pprintpp
+- autoworker
+- certifi
+- python-sql
+
+pretasks:
+- updateDatabase:
+  # Download
+  - scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz somenergia-$(date -I -d yesterday).sql.gz
+  # Backup old database
+  - echo ALTER DATABASE somenergia RENAME TO somenergia_$(ls somenergia-*.sql.gz | tail -n1 | sed 's/somenergia-\(....-..-..\).sql.gz/\1/' |  sed s/-//g; )  | psql
+  # Load new database
+  - createdb somenergia
+  - zcat somenergia-$(date -I -d yesterday).sql.gz | psql -e somenergia
+  # TODO: Adapting database to testing (emails...)
+  # Update database
+  - erpserver --update all --stop-after-init
+  - psql -d somenergia -c "UPDATE res_partner_address SET email = 'oriol.piera@somenergia.coop'"
+
+repositories:
+- path: aeroo
+  branch: openerp5
+- path: aeroolib
+  branch: openerp5
+- path: mongodb_backend
+- path: oorq
+  branch: api_v5
+- path: ooquery
+- path: openerp-sentry
+  branch: v5_legacy
+- path: poweremail2
+  url: git@github.com/gisce/poweremail.git
+  branch: v5_backport
+- path: poweremail_oorq
+- path: spawn_oop
+- path: ws_transactions
+- path: sepa
+- path: libfacturacioatr
+  url: git@github.com/gisce/libFacturacioATR.git
+- path: switching
+- path: libComXML
+- path: cchloader
+  branch: gisce
+- path: sippers
+- path: ir_attachment_mongodb
+- path: qreu
+- path: enerdata
+- path: ooop
+  branch: xmlrpc_transaction
+- path: arquia
+- path: sii
+- path: empowering
+- path: gestionatr
+- path: erp-empowering
+  author: Som-Energia
+- path: amoniak
+  author: Som-Energia
+- path: erppeek_wst
+  author: Som-Energia
+  branch: ws_transaction
+- path: somenergia-utils
+  author: Som-Energia
+- path: factuae
+  author: totaler
+- path: erp
+  author: Som-Energia
+  branch: rolling
+- path: plantmeter
+  author: Som-Energia
+  tests:
+  - nosetests plantmeter --verbose
+  - nosetests scripts/
+- path: somenergia-generationkwh
+  author: Som-Energia
+  tests:
+  - nosetests generationkwh --verbose
+  - nosetests scripts/
+- path: sermepa # webforms
+  author: Som-Energia
+  tests:
+  - ./setup.py test
+
+editablePackages:
+# gisce
+- aeroolib/aeroolib
+- sepa
+- libFacturacioATR
+- switching
+- libComXML
+- sippers
+- qreu
+- enerdata
+- arquia
+- ooop
+#- cchloader
+#- gestionatr
+#- empowering
+#- sii
+#- ooquery
+# somenergia
+- sermepa
+- plantmeter
+- somenergia-generationkwh
+- facturae
+- amoniak
+
+postgresUsers:
+- somenergia
+- sommonitor
+- erp
+
+
+
+
+# vim: ts=2 et sw=2
