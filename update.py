@@ -30,7 +30,7 @@ def running(command, *args, **kwds) :
 def cd(path) :
     oldpath = os.getcwd()
     os.chdir(path)
-    #step("Entering {}",os.getcwd())
+    step("Entering {}",os.getcwd())
     try:
         yield
     finally:
@@ -69,10 +69,15 @@ def runTests(repo):
     return errors
 
 
-def downloadLastBackup():
-    import datetime
-    yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
-    backupfile = "somenergia-{}.sql.gz".format(yesterday)
+def downloadLastBackup(backupfile = None):
+    if not backupfile:
+        import datetime
+        yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
+        backupfile = "somenergia-{}.sql.gz".format(yesterday)
+
+    if os.path.exists(backupfile):
+        warn("Reusing already downloaded '{}'", backupfile)
+
     runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
     return backupfile
 
@@ -209,49 +214,54 @@ def installCustomPdfGenerator():
     run("rm wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
 
 def deploy(p):
-    aptInstall(p.ubuntuDependencies)
+    False and aptInstall(p.ubuntuDependencies)
     False and installCustomPdfGenerator()
-    pipInstallUpgrade(p.pipDependencies)
+    False and pipInstallUpgrade(p.pipDependencies)
     for repository in p.repositories:
         clone(repository)
 
     for path in p.editablePackages:
-        installEditable(path)
+        False and installEditable(path)
 
     # TODO: on deploy, add both gisce and som rolling remotes
 
     with cd('erp'):
-        run("./tools/link_addons.sh")
+        runOrFail("./tools/link_addons.sh")
 
+    run('mkdir -p $VIRTUAL_ENV/conf')
 
-    run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
+    # TODO: Copy configuration
+    # run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
 
-    systemUser = os.environment.get('USER')
+    systemUser = os.environ.get('USER')
     p.postgresUsers.append(systemUser)
     for user in p.postgresUsers:
         # TODO: Postgres version in config path!!
-        run("""sudo su -c 'echo "local   all       '{}'       peer" >> /etc/postgresql/9.5/main/pg_hba.conf'""",user)
-        run("sudo -u postgres createuser -P -s {}", user)
+        False and runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/{pgversion}/main/pg_hba.conf'""", user=user, **c)
+        False and runOrFail("sudo -u postgres createuser -P -s {}", user)
 
     backupfile = downloadLastBackup()
 
-    #run("createdb somenergia")
-    #run("zcat {} | psql -e somenergia", backupfile)
-    #run("""psql -d somenergia -c "UPDATE res_partner_address SET email = '{}'" """, c.email)
+    run("createdb {dbname}", **c)
+    run("zcat {} | psql -e {dbname}", backupfile, **c)
+    run("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
 def completeRepoData(repository):
     repository.setdefault('branch', 'master')
     repository.setdefault('user', 'gisce')
     repository.setdefault('url',
-        'git+ssh://git@github.com/{user}/{path}.git'
+        'git@github.com:{user}/{path}.git'
         .format(**repository))
 
 
 def clone(repository):
     completeRepoData(repository)
     step("Cloning repository {path}: {url}",**repository)
-    run("git clone {url} {path} --branch {branch}",**repository)
+    if os.path.exists(repository.path):
+        warn("Path {path} already exists. Skipping clone", **repository)
+        return
+    runOrFail("git clone {url} {path} --branch {branch}",**repository)
 
 def installEditable(path):
     step("Install editable repository {}", path)

@@ -32,7 +32,7 @@ pipDependencies:
 - psycopg2
 - egenix-mx-base
 - Babel
-- pymongo
+- pymongo<3.0
 - rq
 - raven
 - sentry
