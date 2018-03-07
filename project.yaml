@@ -134,11 +134,12 @@ repositories:
   tests:
   - ./setup.py test
 
+# Warning: in dependency order
 editablePackages:
 # gisce
 - aeroolib/aeroolib
 - sepa
-- libFacturacioATR
+- libfacturacioatr
 - switching
 - libComXML
 - sippers
