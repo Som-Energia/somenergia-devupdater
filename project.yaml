@@ -114,7 +114,7 @@ repositories:
   branch: ws_transaction
 - path: somenergia-utils
   user: Som-Energia
-- path: factuae
+- path: facturae
   user: totaler
 - path: erp
   user: Som-Energia
