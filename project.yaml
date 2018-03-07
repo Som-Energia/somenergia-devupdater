@@ -83,14 +83,14 @@ repositories:
 - path: openerp-sentry
   branch: v5_legacy
 - path: poweremail2
-  url: git@github.com/gisce/poweremail.git
+  url: git@github.com:gisce/poweremail.git
   branch: v5_backport
 - path: poweremail_oorq
 - path: spawn_oop
 - path: ws_transactions
 - path: sepa
 - path: libfacturacioatr
-  url: git@github.com/gisce/libFacturacioATR.git
+  url: git@github.com:gisce/libFacturacioATR.git
 - path: switching
 - path: libComXML
 - path: cchloader
