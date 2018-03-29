@@ -69,19 +69,6 @@ def runTests(repo):
     return errors
 
 
-def downloadLastBackup(backupfile = None):
-    if not backupfile:
-        import datetime
-        yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
-        backupfile = "somenergia-{}.sql.gz".format(yesterday)
-
-    if os.path.exists(backupfile):
-        warn("Reusing already downloaded '{}'", backupfile)
-        return backupfile
-
-    runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
-    return backupfile
-
 def newCommitsFromRemote():
     errorcode, output = run(
         "git log HEAD..HEAD@{{upstream}} "
@@ -109,11 +96,46 @@ def fetch():
     errorcode, output = run(
         "git fetch --all")
 
+def clone(repository):
+    step("Cloning repository {path}: {url}",**repository)
+    if os.path.exists(repository.path):
+        warn("Path {path} already exists. Skipping clone", **repository)
+        return
+    runOrFail("git clone {url} {path} --branch {branch}",**repository)
+
 def currentBranch():
     errorcode, output = run(
         "git rev-parse --abbrev-ref HEAD")
     return output.strip()
 
+def cloneOrUpdateRepositories(p):
+    changes = ns()
+    for repo in p.repositories:
+        if not os.path.exists(repo.path):
+            changes[repo.path] = [] # TODO: log cloned
+            step("Cloning {path}", **repo)
+            clone(repo)
+            continue
+        with cd(repo.path):
+            step("Fetching changes {path}",**repo)
+            fetch()
+            branch = currentBranch()
+            if branch != repo.branch:
+                warn("Not rebasing repo '{path}': "
+                    "in branch '{currentBranch}' instead of '{branch}'",
+                    currentBranch=branch, **repo)
+                continue
+            repoChanges = newCommitsFromRemote()
+            if not repoChanges: continue
+            changes[repo.path] = repoChanges
+            step("Rebasing {path}",**repo)
+            rebase()
+    return changes
+
+def installEditable(path):
+    step("Install editable repository {}", path)
+    with cd(path):
+        run("pip install -e .")
 
 def testRepositories(p, results):
 
@@ -139,6 +161,13 @@ def summary(results):
     ))
 
 def pipPackages():
+    """
+    Returns a list of namespaces, containing information
+    on pip installed information:
+    package name, current version, available version,
+    type and optionally the editable path.
+    """
+
     err, output = run("pip list -o --format=columns")
     if err:
         error("Failed to get list of pip packages")
@@ -159,6 +188,7 @@ def pipPackages():
     ]
 
 def pendingPipUpgrades():
+    "Returns a list of pip packages with available upgrades"
     from distutils.version import LooseVersion as version
     return [
         p for p in pipPackages()
@@ -200,36 +230,31 @@ def installCustomPdfGenerator():
     run("sudo dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("rm wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
 
-def cloneOrUpdateRepositories(p):
+def downloadLastBackup(backupfile = None):
+    if not backupfile:
+        import datetime
+        yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
+        backupfile = "somenergia-{}.sql.gz".format(yesterday)
 
-    changes = ns()
-    for repo in p.repositories:
-        if not os.path.exists(repo.path):
-            changes[repo.path] = [] # TODO: log cloned
-            step("Cloning {path}", **repo)
-            clone(repo)
-            continue
-        with cd(repo.path):
-            step("Fetching changes {path}",**repo)
-            fetch()
-            branch = currentBranch()
-            if branch != repo.branch:
-                warn("Not rebasing repo '{path}': "
-                    "in branch '{currentBranch}' instead of '{branch}'",
-                    currentBranch=branch, **repo)
-                continue
-            repoChanges = newCommitsFromRemote()
-            if not repoChanges: continue
-            changes[repo.path] = repoChanges
-            step("Rebasing {path}",**repo)
-            rebase()
-    return changes
+    if os.path.exists(backupfile):
+        warn("Reusing already downloaded '{}'", backupfile)
+        return backupfile
+
+    runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
+    return backupfile
 
 def dbExists(dbname):
     err, out = run("""psql -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
         dbname)
-    return out.trim()=="1"
+    return out.strip()=="1"
 
+def loadDb(p):
+        backupfile = downloadLastBackup()
+        if dbExists(c.dbname):
+            runOrFail("dropdb --if-exists {dbname}", **c)
+        runOrFail("createdb {dbname}", **c)
+        runOrFail("pv {} | zcat | psql -e {dbname}", backupfile, **c)
+        runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 def hasChanges(results):
     return any(results.changes.values())
@@ -241,17 +266,19 @@ def deploy(p):
         aptInstall(p.ubuntuDependencies)
     if missingAptPackages(['wkhtmltox']):
         installCustomPdfGenerator()
-    if not c.get("skipPipUpgrade"):
+    if not c.skipPipUpgrade:
         pipInstallUpgrade(p.pipDependencies)
         #pipInstallUpgrade(pendingPipUpgrades())
 
     results.changes = cloneOrUpdateRepositories(p)
 
+    if not c.skipPipUpgrade:
+        # TODO: Just the ones updated or cloned
+        for path in p.editablePackages:
+            installEditable(path)
+
     if not c.force and not hasChanges(results):
         raise Exception("No changes")
-
-    for path in p.editablePackages:
-        installEditable(path)
 
     # TODO: on deploy, add both gisce and som rolling remotes
 
@@ -259,8 +286,7 @@ def deploy(p):
     with cd('erp'):
         runOrFail("./tools/link_addons.sh")
 
-
-    if c.firstRun:
+    if not os.path.exists('{VIRTUAL_ENV}/conf/somenergia.conf'.format(**os.environ)):
         run('mkdir -p $VIRTUAL_ENV/conf')
         run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
 
@@ -271,27 +297,7 @@ def deploy(p):
             runOrFail("sudo -u postgres createuser -P -s {}", user)
 
     if not dbExists(c.dbname) or c.updateDatabase:
-        backupfile = downloadLastBackup()
-        if dbExists(c.dbname):
-            runOrFail("dropdb --if-exists {dbname}", **c)
-        runOrFail("createdb {dbname}", **c)
-        runOrFail("zcat {} | psql -e {dbname}", backupfile, **c)
-        runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
-
-
-    testRepositories(p, results)
-
-def clone(repository):
-    step("Cloning repository {path}: {url}",**repository)
-    if os.path.exists(repository.path):
-        warn("Path {path} already exists. Skipping clone", **repository)
-        return
-    runOrFail("git clone {url} {path} --branch {branch}",**repository)
-
-def installEditable(path):
-    step("Install editable repository {}", path)
-    with cd(path):
-        run("pip install -e .")
+        loadDb()
 
 
 def completeRepoData(repository):
@@ -303,7 +309,19 @@ def completeRepoData(repository):
 
 results=ns()
 p = ns.load("project.yaml")
-c = ns.load("config.yaml")
+
+c = ns(
+    workingpath='.',
+    email='someone@somewhere.net',
+    dbname='somenergia',
+    pgversion='9.5',
+    skipPipUpgrade = True,
+    force = False,
+    updateDatabase = False,
+)
+c.update(**ns.load("config.yaml"))
+
+
 for repo in p.repositories:
     completeRepoData(repo)
 
@@ -314,6 +332,7 @@ except OSError:
 
 with cd(c.workingpath):
     deploy(p)
+    testRepositories(p, results)
 
 
 results.dump("results.yaml")

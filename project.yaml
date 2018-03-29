@@ -13,6 +13,7 @@ ubuntuDependencies:
 - gcc
 - g++
 - python-pip
+- pv
 
 predeploy:
 - mkvirtualenv -p $(which python2) --system-site-packages erp
@@ -56,6 +57,7 @@ pipDependencies:
 - autoworker
 - certifi
 - python-sql
+- rednose
 
 pretasks:
 - updateDatabase:
