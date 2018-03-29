@@ -136,6 +136,7 @@ repositories:
 
 # Warning: in dependency order
 editablePackages:
+
 # gisce
 - aeroolib/aeroolib
 - sepa
@@ -152,6 +153,7 @@ editablePackages:
 #- empowering
 #- sii
 #- ooquery
+
 # somenergia
 - sermepa
 - plantmeter

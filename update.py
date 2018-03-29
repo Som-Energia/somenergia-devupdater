@@ -225,6 +225,12 @@ def cloneOrUpdateRepositories(p):
             rebase()
     return changes
 
+def dbExists(dbname):
+    err, out = run("""psql -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
+        dbname)
+    return out.trim()=="1"
+
+
 def hasChanges(results):
     return any(results.changes.values())
 
@@ -237,44 +243,43 @@ def deploy(p):
         installCustomPdfGenerator()
     if not c.get("skipPipUpgrade"):
         pipInstallUpgrade(p.pipDependencies)
+        #pipInstallUpgrade(pendingPipUpgrades())
 
     results.changes = cloneOrUpdateRepositories(p)
 
-    if not hasChanges(results):
+    if not c.force and not hasChanges(results):
         raise Exception("No changes")
 
-    if False:
-        for path in p.editablePackages:
-            installEditable(path)
+    for path in p.editablePackages:
+        installEditable(path)
 
     # TODO: on deploy, add both gisce and som rolling remotes
 
+    # TODO: Just a first time or if one repo is cloned
     with cd('erp'):
         runOrFail("./tools/link_addons.sh")
 
-    run('mkdir -p $VIRTUAL_ENV/conf')
 
-    # TODO: Copy configuration
-    # run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
+    if c.firstRun:
+        run('mkdir -p $VIRTUAL_ENV/conf')
+        run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
 
-    systemUser = os.environ.get('USER')
-    p.postgresUsers.append(systemUser)
-    for user in p.postgresUsers:
-        # TODO: Postgres version in config path!!
-        False and runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/{pgversion}/main/pg_hba.conf'""", user=user, **c)
-        False and runOrFail("sudo -u postgres createuser -P -s {}", user)
+        systemUser = os.environ.get('USER')
+        p.postgresUsers.append(systemUser)
+        for user in p.postgresUsers:
+            runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/*/main/pg_hba.conf'""", user=user, **c)
+            runOrFail("sudo -u postgres createuser -P -s {}", user)
 
-    backupfile = downloadLastBackup()
+    if not dbExists(c.dbname) or c.updateDatabase:
+        backupfile = downloadLastBackup()
+        if dbExists(c.dbname):
+            runOrFail("dropdb --if-exists {dbname}", **c)
+        runOrFail("createdb {dbname}", **c)
+        runOrFail("zcat {} | psql -e {dbname}", backupfile, **c)
+        runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
-    run("createdb {dbname}", **c)
-    run("zcat {} | psql -e {dbname}", backupfile, **c)
-    run("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
-
-    #cloneOrUpdateRepositories(p, results)
-    #testRepositories(p, results)
-    #print(ns(packages=pendingPipUpgrades()).dump())
-    #pipInstallUpgrade(pendingPipUpgrades())
+    testRepositories(p, results)
 
 def clone(repository):
     step("Cloning repository {path}: {url}",**repository)
