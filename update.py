@@ -77,13 +77,14 @@ def downloadLastBackup(backupfile = None):
 
     if os.path.exists(backupfile):
         warn("Reusing already downloaded '{}'", backupfile)
+        return backupfile
 
     runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
     return backupfile
 
 def newCommitsFromRemote():
     errorcode, output = run(
-        "git log HEAD..ORIG_HEAD "
+        "git log HEAD..HEAD@{{upstream}} "
             "--exit-code --pretty=format:'%h\t%ai\t%s'"
                 )
     return [
@@ -108,33 +109,11 @@ def fetch():
     errorcode, output = run(
         "git fetch --all")
 
+def currentBranch():
+    errorcode, output = run(
+        "git rev-parse --abbrev-ref HEAD")
+    return output.strip()
 
-def hasChanges(results):
-    return any(results.changes.values())
-
-def update(p, results, force):
-
-    results.changes = ns()
-    for repo in p.repositories:
-        with cd(repo.path):
-            step("Fetching changes {path}",**repo)
-            fetch()
-            changes = newCommitsFromRemote()
-            if not changes: continue
-            results.changes[repo.path] = newCommitsFromRemote()
-
-    if not force and not hasChanges(results):
-        raise Exception("No changes")
-
-    for repo in p.repositories:
-        if os.path.exists(repo.path):
-            with cd(repo.path):
-                step("Rebasing {path}",**repo)
-                rebase()
-        else:
-            step("Cloning {path}", **repo)
-            clone(repo)
-    return results
 
 def testRepositories(p, results):
 
@@ -207,21 +186,66 @@ def aptInstall(packages):
     if not er: return
     error("Unable to install debian packages:\n{}", out)
 
+def missingAptPackages(packages):
+    step("Checking missing debian packages")
+    er, out = run("dpkg-query -W  -f '${{package}}\\n' {}",
+        " ".join(packages))
+    present = out.split()
+    return [p for p in packages if p not in present]
+
+
 def installCustomPdfGenerator():
     step("Installing custo wkhtmltopdf")
     run("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("sudo dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("rm wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
 
-def deploy(p):
-    False and aptInstall(p.ubuntuDependencies)
-    False and installCustomPdfGenerator()
-    False and pipInstallUpgrade(p.pipDependencies)
-    for repository in p.repositories:
-        clone(repository)
+def cloneOrUpdateRepositories(p):
 
-    for path in p.editablePackages:
-        False and installEditable(path)
+    changes = ns()
+    for repo in p.repositories:
+        if not os.path.exists(repo.path):
+            changes[repo.path] = [] # TODO: log cloned
+            step("Cloning {path}", **repo)
+            clone(repo)
+            continue
+        with cd(repo.path):
+            step("Fetching changes {path}",**repo)
+            fetch()
+            branch = currentBranch()
+            if branch != repo.branch:
+                warn("Not rebasing repo '{path}': "
+                    "in branch '{currentBranch}' instead of '{branch}'",
+                    currentBranch=branch, **repo)
+                continue
+            repoChanges = newCommitsFromRemote()
+            if not repoChanges: continue
+            changes[repo.path] = repoChanges
+            step("Rebasing {path}",**repo)
+            rebase()
+    return changes
+
+def hasChanges(results):
+    return any(results.changes.values())
+
+
+def deploy(p):
+    missingApt = missingAptPackages(p.ubuntuDependencies)
+    if missingApt:
+        aptInstall(p.ubuntuDependencies)
+    if missingAptPackages(['wkhtmltox']):
+        installCustomPdfGenerator()
+    if not c.get("skipPipUpgrade"):
+        pipInstallUpgrade(p.pipDependencies)
+
+    results.changes = cloneOrUpdateRepositories(p)
+
+    if not hasChanges(results):
+        raise Exception("No changes")
+
+    if False:
+        for path in p.editablePackages:
+            installEditable(path)
 
     # TODO: on deploy, add both gisce and som rolling remotes
 
@@ -247,16 +271,12 @@ def deploy(p):
     run("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
-def completeRepoData(repository):
-    repository.setdefault('branch', 'master')
-    repository.setdefault('user', 'gisce')
-    repository.setdefault('url',
-        'git@github.com:{user}/{path}.git'
-        .format(**repository))
-
+    #cloneOrUpdateRepositories(p, results)
+    #testRepositories(p, results)
+    #print(ns(packages=pendingPipUpgrades()).dump())
+    #pipInstallUpgrade(pendingPipUpgrades())
 
 def clone(repository):
-    completeRepoData(repository)
     step("Cloning repository {path}: {url}",**repository)
     if os.path.exists(repository.path):
         warn("Path {path} already exists. Skipping clone", **repository)
@@ -268,9 +288,20 @@ def installEditable(path):
     with cd(path):
         run("pip install -e .")
 
+
+def completeRepoData(repository):
+    repository.setdefault('branch', 'master')
+    repository.setdefault('user', 'gisce')
+    repository.setdefault('url',
+        'git@github.com:{user}/{path}.git'
+        .format(**repository))
+
 results=ns()
 p = ns.load("project.yaml")
 c = ns.load("config.yaml")
+for repo in p.repositories:
+    completeRepoData(repo)
+
 try:
     os.makedirs(c.workingpath)
 except OSError:
@@ -278,10 +309,6 @@ except OSError:
 
 with cd(c.workingpath):
     deploy(p)
-    #update(p, results, force=True)
-    #testRepositories(p, results)
-    #print(ns(packages=pendingPipUpgrades()).dump())
-    #pipInstallUpgrade(pendingPipUpgrades())
 
 
 results.dump("results.yaml")
