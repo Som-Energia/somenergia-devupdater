@@ -14,6 +14,7 @@ ubuntuDependencies:
 - g++
 - python-pip
 - pv
+- libxmlsec1-dev # required by FACe_lib
 
 predeploy:
 - mkvirtualenv -p $(which python2) --system-site-packages erp
@@ -31,6 +32,7 @@ pipDependencies:
 - mako
 - pydot
 - psycopg2
+- blinker
 - egenix-mx-base
 - Babel
 - pymongo<3.0
@@ -40,6 +42,7 @@ pipDependencies:
 - psutil
 - times
 - xlwt
+- FACe_lib
 - pysftp
 - redis
 - osconf
@@ -56,6 +59,7 @@ pipDependencies:
 - pprintpp
 - autoworker
 - certifi
+- FACe_lib
 - python-sql
 - rednose
 
