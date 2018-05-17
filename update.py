@@ -277,14 +277,14 @@ def deploy(p):
         for path in p.editablePackages:
             installEditable(path)
 
-    if not c.force and not hasChanges(results):
-        raise Exception("No changes")
-
     # TODO: on deploy, add both gisce and som rolling remotes
 
     # TODO: Just a first time or if one repo is cloned
     with cd('erp'):
         runOrFail("./tools/link_addons.sh")
+
+    if not c.forceTest and not hasChanges(results):
+        raise Exception("No changes")
 
     if not os.path.exists('{VIRTUAL_ENV}/conf/somenergia.conf'.format(**os.environ)):
         run('mkdir -p $VIRTUAL_ENV/conf')
@@ -332,7 +332,7 @@ except OSError:
 
 with cd(c.workingpath):
     deploy(p)
-    testRepositories(p, results)
+    #testRepositories(p, results)
 
 
 results.dump("results.yaml")
