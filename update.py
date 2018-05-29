@@ -260,7 +260,7 @@ def hasChanges(results):
     return any(results.changes.values())
 
 
-def deploy(p):
+def deploy(p, results):
     missingApt = missingAptPackages(p.ubuntuDependencies)
     if missingApt:
         aptInstall(p.ubuntuDependencies)
@@ -307,39 +307,43 @@ def completeRepoData(repository):
         'git@github.com:{user}/{path}.git'
         .format(**repository))
 
-results=ns()
-p = ns.load("project.yaml")
 
-c = ns(
-    workingpath='.',
-    email='someone@somewhere.net',
-    dbname='somenergia',
-    pgversion='9.5',
-    skipPipUpgrade = True,
-    force = False,
-    updateDatabase = False,
-)
-c.update(**ns.load("config.yaml"))
+def main():
 
+    results=ns()
+    p = ns.load("project.yaml")
 
-for repo in p.repositories:
-    completeRepoData(repo)
-
-try:
-    os.makedirs(c.workingpath)
-except OSError:
-    pass
-
-with cd(c.workingpath):
-    deploy(p)
-    #testRepositories(p, results)
+    c = ns(
+        workingpath='.',
+        email='someone@somewhere.net',
+        dbname='somenergia',
+        pgversion='9.5',
+        skipPipUpgrade = True,
+        force = False,
+        updateDatabase = False,
+    )
+    c.update(**ns.load("config.yaml"))
 
 
-results.dump("results.yaml")
-print summary(results)
+    for repo in p.repositories:
+        completeRepoData(repo)
+
+    try:
+        os.makedirs(c.workingpath)
+    except OSError:
+        pass
+
+    with cd(c.workingpath):
+        deploy(p, results)
+        #testRepositories(p, results)
 
 
+    results.dump("results.yaml")
+    print summary(results)
 
+
+if __name__ == '__main__':
+    main()
 
 
 # vim: et ts=4 sw=4
