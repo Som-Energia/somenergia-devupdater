@@ -5,18 +5,18 @@ import sys
 
 def checkInVirtualEnvironment():
     venv = os.environ.get('VIRTUAL_ENV',None)
-    if venv:
-        print("Using venv: {}".format(os.path.basename(venv)))
-    else:
-        print(
-            "You need to use a virtual env, create it with mkvirtualenv\n"
-            " $ mkvirtualenv -p $(which python2) --system-site-packages erp\n"
-            " (erp)$ pip install yamlns consolemsg\n"
-        )
-        sys.exit(-1)
+    if venv: return venv
+    print(
+        "\033[31;1m"
+        "You need to use a virtual env, create it with mkvirtualenv\n"
+        " $ mkvirtualenv -p $(which python2) --system-site-packages erp\n"
+        " (erp)$ pip install yamlns consolemsg\n"
+        "\033[0m"
+    )
+    sys.exit(-1)
 
-checkInVirtualEnvironment()
-
+venv = checkInVirtualEnvironment()
+print("Using venv: {}".format(os.path.basename(venv)))
 
 import subprocess
 from contextlib import contextmanager
@@ -68,6 +68,35 @@ def runTests(repo):
             )
     return errors
 
+# TODO: start/stopService
+
+def testRepositories(p, results):
+
+    results.failures=ns()
+    for repo in p.repositories:
+        if 'tests' not in repo: continue
+        with cd(repo.path):
+            result = runTests(repo)
+            results.failures[repo.path] = result
+
+
+def summary(results):
+    print(results.dump())
+    return ''.join((
+        "- Failed module {module}\n".format(
+            module=module,
+            )
+        for module in results.failures
+        if any(
+            'failed' in command
+            for command in results.failures[module]
+        )
+    ))
+
+def hasChanges(results):
+    return any(results.changes.values())
+
+### Git stuff
 
 def newCommitsFromRemote():
     errorcode, output = run(
@@ -96,20 +125,28 @@ def fetch():
     errorcode, output = run(
         "git fetch --all")
 
+def currentBranch():
+    errorcode, output = run(
+        "git rev-parse --abbrev-ref HEAD")
+    # TODO: errors unmanaged
+    return output.strip()
+
 def clone(repository):
+    """
+    The repository is a dict with the following keys:
+    - path: the local path where to place it
+    - url: remote url where to fetch it
+    - branch: the working branch
+    """
     step("Cloning repository {path}: {url}",**repository)
     if os.path.exists(repository.path):
         warn("Path {path} already exists. Skipping clone", **repository)
         return
     runOrFail("git clone {url} {path} --branch {branch}",**repository)
 
-def currentBranch():
-    errorcode, output = run(
-        "git rev-parse --abbrev-ref HEAD")
-    return output.strip()
 
-def cloneOrUpdateRepositories(p):
-    changes = ns()
+def cloneOrUpdateRepositories(p, results):
+    changes = results.setdefault('changes',ns())
     for repo in p.repositories:
         if not os.path.exists(repo.path):
             changes[repo.path] = [] # TODO: log cloned
@@ -132,33 +169,13 @@ def cloneOrUpdateRepositories(p):
             rebase()
     return changes
 
+
+## Pip stuff
+
 def installEditable(path):
     step("Install editable repository {}", path)
     with cd(path):
         run("pip install -e .")
-
-def testRepositories(p, results):
-
-    results.failures=ns()
-    for repo in p.repositories:
-        if 'tests' not in repo: continue
-        with cd(repo.path):
-            result = runTests(repo)
-            results.failures[repo.path] = result
-
-
-def summary(results):
-    print(results.dump())
-    return ''.join((
-        "- Failed module {module}\n".format(
-            module=module,
-            )
-        for module in results.failures
-        if any(
-            'failed' in command
-            for command in results.failures[module]
-        )
-    ))
 
 def pipPackages():
     """
@@ -168,7 +185,7 @@ def pipPackages():
     type and optionally the editable path.
     """
 
-    err, output = run("pip list -o --format=columns")
+    err, output = run("pip list -o --exclude-editable --format=columns")
     if err:
         error("Failed to get list of pip packages")
     lines = output.splitlines()
@@ -191,23 +208,29 @@ def pendingPipUpgrades():
     "Returns a list of pip packages with available upgrades"
     from distutils.version import LooseVersion as version
     return [
-        p for p in pipPackages()
+        p
+        for p in pipPackages()
         if version(p.old)<version(p.new)
         and ('path' not in p or not p.path)
         ]
 
-def pipInstallUpgrade(packages):
+def pipInstallUpgrade(packages, results):
     # TODO: notify as changes
     step("Upgrading pip packages: {}", ', '.join(packages))
     if not packages:
         warn("No pending pip upgrades")
         return
 
+    changes = results.setdefault('changes',ns())
+
     packages = ' '.join(["'{}'".format(x) for x in packages])
     err, output = run('pip install --upgrade {}', packages)
     if err:
         error("Error upgrading pip packages")
         fail(output)
+
+### Apt stuff
+
 
 def aptInstall(packages):
     packages=' '.join(packages)
@@ -223,12 +246,14 @@ def missingAptPackages(packages):
     present = out.split()
     return [p for p in packages if p not in present]
 
-
 def installCustomPdfGenerator():
     step("Installing custo wkhtmltopdf")
     run("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("sudo dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("rm wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+
+
+### Database stuff
 
 def downloadLastBackup(backupfile = None):
     if not backupfile:
@@ -256,8 +281,6 @@ def loadDb(p):
         runOrFail("pv {} | zcat | psql -e {dbname}", backupfile, **c)
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
-def hasChanges(results):
-    return any(results.changes.values())
 
 
 def deploy(p, results):
@@ -266,11 +289,13 @@ def deploy(p, results):
         aptInstall(p.ubuntuDependencies)
     if missingAptPackages(['wkhtmltox']):
         installCustomPdfGenerator()
-    if not c.skipPipUpgrade:
-        pipInstallUpgrade(p.pipDependencies)
-        #pipInstallUpgrade(pendingPipUpgrades())
 
-    results.changes = cloneOrUpdateRepositories(p)
+    if False and missingPipPackages(p.pipDependencies):
+        pipInstallUpgrade(p.pipDependencies)
+    elif False and not c.skipPipUpgrade:
+        pipInstallUpgrade(pendingPipUpgrades())
+
+    cloneOrUpdateRepositories(p, results)
 
     if not c.skipPipUpgrade:
         # TODO: Just the ones updated or cloned
@@ -309,7 +334,6 @@ def completeRepoData(repository):
 
 
 def main():
-
     results=ns()
     p = ns.load("project.yaml")
 
