@@ -322,7 +322,7 @@ def deploy(p, results):
             runOrFail("sudo -u postgres createuser -P -s {}", user)
 
     if not dbExists(c.dbname) or c.updateDatabase:
-        loadDb()
+        loadDb(p)
 
 
 def completeRepoData(repository):
@@ -358,7 +358,8 @@ def main():
         pass
 
     with cd(c.workingpath):
-        deploy(p, results)
+        #deploy(p, results)
+        loadDb(p)
         #testRepositories(p, results)
 
 
