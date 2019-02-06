@@ -290,9 +290,9 @@ def deploy(p, results):
     if missingAptPackages(['wkhtmltox']):
         installCustomPdfGenerator()
 
-    if False and missingPipPackages(p.pipDependencies):
+    if missingPipPackages(p.pipDependencies):
         pipInstallUpgrade(p.pipDependencies)
-    elif False and not c.skipPipUpgrade:
+    elif not c.skipPipUpgrade:
         pipInstallUpgrade(pendingPipUpgrades())
 
     cloneOrUpdateRepositories(p, results)
@@ -308,9 +308,6 @@ def deploy(p, results):
     with cd('erp'):
         runOrFail("./tools/link_addons.sh")
 
-    if not c.forceTest and not hasChanges(results):
-        raise Exception("No changes")
-
     if not os.path.exists('{VIRTUAL_ENV}/conf/somenergia.conf'.format(**os.environ)):
         run('mkdir -p $VIRTUAL_ENV/conf')
         run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
@@ -323,6 +320,10 @@ def deploy(p, results):
 
     if not dbExists(c.dbname) or c.updateDatabase:
         loadDb(p)
+
+    if not c.forceTest and not hasChanges(results):
+        raise Exception("No changes")
+
 
 
 def completeRepoData(repository):
@@ -343,7 +344,7 @@ def main():
         dbname='somenergia',
         pgversion='9.5',
         skipPipUpgrade = True,
-        force = False,
+        forceTest = False,
         updateDatabase = False,
     )
     c.update(**ns.load("config.yaml"))
@@ -358,7 +359,7 @@ def main():
         pass
 
     with cd(c.workingpath):
-        #deploy(p, results)
+        deploy(p, results)
         loadDb(p)
         #testRepositories(p, results)
 
