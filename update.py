@@ -324,7 +324,8 @@ def deploy(p, results):
         run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
 
         systemUser = os.environ.get('USER')
-        p.postgresUsers.append(systemUser)
+        if systemUser not in p.postgresUsers:
+            p.postgresUsers.append(systemUser)
         for user in p.postgresUsers:
             runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/*/main/pg_hba.conf'""", user=user, **c)
             runOrFail("sudo -u postgres createuser -P -s {}", user)
