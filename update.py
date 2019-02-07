@@ -249,8 +249,9 @@ def missingAptPackages(packages):
 def installCustomPdfGenerator():
     step("Installing custo wkhtmltopdf")
     run("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
-    run("sudo dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
-    run("rm wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+    run("wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb")
+    run("sudo dpkg -i libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+    run("rm libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
 
 
 ### Database stuff
