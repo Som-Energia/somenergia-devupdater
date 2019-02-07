@@ -321,6 +321,7 @@ def deploy(p, results):
 
     if not os.path.exists('{VIRTUAL_ENV}/conf/somenergia.conf'.format(**os.environ)):
         run('mkdir -p $VIRTUAL_ENV/conf')
+        step("Next command will need somdevel@sf5 password")
         run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
 
         systemUser = os.environ.get('USER')
