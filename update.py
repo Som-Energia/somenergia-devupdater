@@ -180,7 +180,7 @@ def installEditable(path):
 def pipPackages():
     """
     Returns a list of namespaces, containing information
-    on pip installed information:
+    on  installed packages:
     package name, current version, available version,
     type and optionally the editable path.
     """
@@ -228,6 +228,17 @@ def pipInstallUpgrade(packages, results):
     if err:
         error("Error upgrading pip packages")
         fail(output)
+
+def missingPipPackages(required):
+    installed = [
+	package.name
+	for package in pipPackages()
+    ]
+    return [
+	package
+	for package in required
+	if package not in installed
+    ]
 
 ### Apt stuff
 
@@ -283,7 +294,6 @@ def loadDb(p):
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
-
 def deploy(p, results):
     missingApt = missingAptPackages(p.ubuntuDependencies)
     if missingApt:
@@ -292,9 +302,9 @@ def deploy(p, results):
         installCustomPdfGenerator()
 
     if missingPipPackages(p.pipDependencies):
-        pipInstallUpgrade(p.pipDependencies)
+        pipInstallUpgrade(p.pipDependencies, results)
     elif not c.skipPipUpgrade:
-        pipInstallUpgrade(pendingPipUpgrades())
+        pipInstallUpgrade(pendingPipUpgrades(), results)
 
     cloneOrUpdateRepositories(p, results)
 
