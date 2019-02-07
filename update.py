@@ -333,22 +333,21 @@ def completeRepoData(repository):
         'git@github.com:{user}/{path}.git'
         .format(**repository))
 
+c = ns(
+    workingpath='.',
+    email='someone@somewhere.net',
+    dbname='somenergia',
+    pgversion='9.5',
+    skipPipUpgrade = True,
+    forceTest = False,
+    updateDatabase = False,
+)
+c.update(**ns.load("config.yaml"))
+
 
 def main():
     results=ns()
     p = ns.load("project.yaml")
-
-    c = ns(
-        workingpath='.',
-        email='someone@somewhere.net',
-        dbname='somenergia',
-        pgversion='9.5',
-        skipPipUpgrade = True,
-        forceTest = False,
-        updateDatabase = False,
-    )
-    c.update(**ns.load("config.yaml"))
-
 
     for repo in p.repositories:
         completeRepoData(repo)
