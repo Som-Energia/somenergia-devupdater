@@ -15,6 +15,9 @@ ubuntuDependencies:
 - python-pip
 - pv
 - libxmlsec1-dev # required by FACe_lib
+- fontconfig
+- libfontconfig1
+- xfonts-75dpi
 
 predeploy:
 - mkvirtualenv -p $(which python2) --system-site-packages erp
