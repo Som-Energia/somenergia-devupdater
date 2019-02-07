@@ -29,7 +29,7 @@ pipDependencies:
 # client
 - pytz
 - egenix-mx-base
-- ruamel.venvgtk
+#- ruamel.venvgtk
 - pyOpenSSL
 # server
 - vatnumber
