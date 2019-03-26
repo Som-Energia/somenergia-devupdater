@@ -86,7 +86,7 @@ def summary(results):
         "- Failed module {module}\n".format(
             module=module,
             )
-        for module in results.failures
+        for module in results.get('failures',[])
         if any(
             'failed' in command
             for command in results.failures[module]
