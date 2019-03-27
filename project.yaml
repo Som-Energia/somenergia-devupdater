@@ -66,6 +66,7 @@ pipDependencies:
 - FACe_lib
 - python-sql
 - rednose
+- retrofix
 
 pretasks:
 - updateDatabase:
