@@ -32,6 +32,7 @@ pipDependencies:
 #- ruamel.venvgtk
 - pyOpenSSL
 # server
+- pyreemote
 - vatnumber
 - mako
 - pydot
@@ -83,6 +84,10 @@ pretasks:
   - psql -d somenergia -c "UPDATE res_partner_address SET email = 'oriol.piera@somenergia.coop'"
 
 repositories:
+- path: orakwlum_client
+  url: git@github.com:gisce/orakWlum-client.git
+- path: CNMC-Client
+  url: git@github.com:gisce/cnmc_client.git
 - path: aeroo
   branch: openerp5
 - path: aeroolib
@@ -171,6 +176,8 @@ editablePackages:
 - somenergia-generationkwh
 - facturae
 - amoniak
+- orakWlum-client
+- CNMC-Client
 
 postgresUsers:
 - somenergia
