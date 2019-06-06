@@ -36,12 +36,12 @@ pipDependencies:
 - vatnumber
 - mako
 - pydot
-- psycopg2
+- psycopg2<2.8
 - blinker
 - egenix-mx-base
 - Babel
 - pymongo<3.0
-- rq
+- rq<1.0
 - raven
 - sentry
 - psutil
@@ -134,7 +134,7 @@ repositories:
   user: totaler
 - path: erp
   user: Som-Energia
-  branch: rolling
+  branch: som_rolling
 - path: plantmeter
   user: Som-Energia
   tests:
@@ -183,6 +183,8 @@ postgresUsers:
 - somenergia
 - sommonitor
 - erp
+- somarmota
+- readonly
 
 
 
