@@ -372,7 +372,6 @@ def main():
 
     with cd(c.workingpath):
         deploy(p, results)
-        loadDb(p)
         #testRepositories(p, results)
 
 
