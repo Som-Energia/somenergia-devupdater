@@ -38,7 +38,6 @@ pipDependencies:
 - pydot
 - psycopg2<2.8
 - blinker
-- egenix-mx-base
 - Babel
 - pymongo<3.0
 - rq<1.0
@@ -55,7 +54,6 @@ pipDependencies:
 - fuzzywuzzy
 - lockfile
 - marshmallow>2.0.0
-- egenix-mx-base
 - Python-Chart
 - reportlab>=3.0
 - osconf
@@ -176,7 +174,7 @@ editablePackages:
 - somenergia-generationkwh
 - facturae
 - amoniak
-- orakWlum-client
+- orakwlum_client
 - CNMC-Client
 
 postgresUsers:
