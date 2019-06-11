@@ -3,6 +3,15 @@
 
 Script to deploy/update the development environment
 
+## Setup
+
+- Create a config.yaml file like the one in config-example.yaml
+- `mkvirtualenv ci`
+- `pip install yamlns consolemsg`
+- `./update.py`
+
+
+
 
 ## Use cases
 
