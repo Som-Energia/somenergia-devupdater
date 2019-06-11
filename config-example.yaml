@@ -1,0 +1,10 @@
+workingpath: /wherever/you/want/to/deploy
+email: you@somenergia.coop
+pgversion: '9.5'
+dbname: somenergia_ci
+
+skipPipUpgrade: False
+forceTest: False # Run tests even if no changes detected
+skipTests: True
+updateDatabase: True
+
