@@ -30,6 +30,6 @@ Script to deploy/update the development environment
 - [![Build Status](https://travis-ci.org/Som-Energia/sermepa.svg?branch=master)](https://travis-ci.org/Som-Energia/sermepa) Sermepa
 - [![Build Status](https://travis-ci.org/Som-Energia/somenergia-tomatic.svg?branch=master)](https://travis-ci.org/Som-Energia/somenergia-tomatic) Tomatic
 - [![Build Status](https://travis-ci.org/Som-Energia/intercoop.svg?branch=master)](https://travis-ci.org/Som-Energia/intercoop) Intercoop
-- [![Build Status](https://travis-ci.org/Som-Energia/oomakotest.svg?branch=master)](https://travis-ci.org/Som-Energia/oomakotest) oomakotest
+- [![Build Status](https://travis-ci.org/Som-Energia/somenergia-oomakotest.svg?branch=master)](https://travis-ci.org/Som-Energia/somenergia-oomakotest) oomakotest
 - [![Build Status](https://travis-ci.org/Som-Energia/webforms.svg?branch=master)](https://travis-ci.org/Som-Energia/webforms) webforms
 
