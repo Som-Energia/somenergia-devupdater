@@ -276,7 +276,7 @@ def missingAptPackages(packages):
     return [p for p in packages if p not in present]
 
 def installCustomPdfGenerator():
-    step("Installing custo wkhtmltopdf")
+    step("Installing custom wkhtmltopdf")
     run("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
     run("wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb")
     run("sudo dpkg -i libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
