@@ -3,6 +3,11 @@
 import os
 import sys
 
+try:
+    from pathlib2 import Path
+except ImportError: 
+    from pathlib import Path
+
 def checkInVirtualEnvironment():
     venv = os.environ.get('VIRTUAL_ENV',None)
     if venv: return venv
@@ -22,6 +27,8 @@ import subprocess
 from contextlib import contextmanager
 from yamlns import namespace as ns
 from consolemsg import step, error, warn, fail, success, color, printStdError
+
+basedir = Path(__file__).absolute().parent
 
 def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
@@ -294,6 +301,29 @@ def loadDb(p):
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
+def firstTimeSetup(p,c,results):
+    somenergiaConf = Path(c.virtualenvdir)/'conf'/'somenergia.conf'
+    if somenergiaConf.exists(): return
+
+    logdir = Path(c.virtualenvdir)/'var/log'
+    logdir.mkdir(parents=True, exist_ok=True)
+
+    somenergiaConf.parent.mkdir(parents=True, exist_ok=True)
+    confTemplate = basedir / 'erp.conf'
+    confContent = confTemplate.read_text(encoding='utf8').format(**c)
+    somenergiaConf.write_text(confContent, encoding='utf8')
+    
+    #run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
+
+    if c.systemUser not in p.postgresUsers:
+        p.postgresUsers.append(c.systemUser)
+
+    step("Next command will need somdevel@sf5 password")
+    for user in p.postgresUsers:
+        runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/*/main/pg_hba.conf'""", user=user, **c)
+        runOrFail("sudo -u postgres createuser -P -s {}", user)
+
+
 def deploy(p, results):
     missingApt = missingAptPackages(p.ubuntuDependencies)
     if missingApt:
@@ -319,17 +349,7 @@ def deploy(p, results):
     with cd('erp'):
         runOrFail("./tools/link_addons.sh")
 
-    if not os.path.exists('{VIRTUAL_ENV}/conf/somenergia.conf'.format(**os.environ)):
-        run('mkdir -p $VIRTUAL_ENV/conf')
-        step("Next command will need somdevel@sf5 password")
-        run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
-
-        systemUser = os.environ.get('USER')
-        if systemUser not in p.postgresUsers:
-            p.postgresUsers.append(systemUser)
-        for user in p.postgresUsers:
-            runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/*/main/pg_hba.conf'""", user=user, **c)
-            runOrFail("sudo -u postgres createuser -P -s {}", user)
+    firstTimeSetup(p,c,results)
 
     if not dbExists(c.dbname) or c.updateDatabase:
         loadDb(p)
@@ -354,6 +374,8 @@ c = ns(
     skipPipUpgrade = True,
     forceTest = False,
     updateDatabase = False,
+    virtualenvdir = os.environ.get('VIRTUAL_ENV'),
+    systemUser = os.environ.get('USER'),
 )
 c.update(**ns.load("config.yaml"))
 
