@@ -246,7 +246,7 @@ def missingPipPackages(required):
 def aptInstall(packages):
     packages=' '.join(packages)
     step("Installing debian dependencies: {}",packages)
-    er, out=run("sudo apt-get install {}", packages)
+    er, out=run("sudo apt install {}", packages)
     if not er: return
     error("Unable to install debian packages:\n{}", out)
 
