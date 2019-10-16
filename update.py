@@ -2,6 +2,7 @@
 
 import os
 import sys
+import click
 
 try:
     from pathlib2 import Path
@@ -28,7 +29,7 @@ from contextlib import contextmanager
 from yamlns import namespace as ns
 from consolemsg import step, error, warn, fail, success, color, printStdError
 
-basedir = Path(__file__).absolute().parent
+srcdir = Path(__file__).absolute().parent
 
 def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
@@ -146,7 +147,7 @@ def clone(repository):
     - branch: the working branch
     """
     step("Cloning repository {path}: {url}",**repository)
-    if os.path.exists(repository.path):
+    if Path(repository.path).exists():
         warn("Path {path} already exists. Skipping clone", **repository)
         return
     runOrFail("git clone {url} {path} --branch {branch}",**repository)
@@ -274,13 +275,17 @@ def installCustomPdfGenerator():
 
 ### Database stuff
 
-def downloadLastBackup(backupfile = None):
+def downloadLastBackup():
+    backupfile = None
+    if c.reuseBackup:
+        for backupfile in sorted(Path(c.workingpath).glob('somenergia-*.sql.gz')):
+            break
     if not backupfile:
         import datetime
         yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
-        backupfile = "somenergia-{}.sql.gz".format(yesterday)
+        backupfile = Path("somenergia-{}.sql.gz".format(yesterday))
 
-    if os.path.exists(backupfile):
+    if backupfile.exists() and not c.forceDownload:
         warn("Reusing already downloaded '{}'", backupfile)
         return backupfile
 
@@ -288,40 +293,53 @@ def downloadLastBackup(backupfile = None):
     return backupfile
 
 def dbExists(dbname):
-    err, out = run("""psql -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
+    err, out = run("""psql postgres -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
         dbname)
     return out.strip()=="1"
 
 def loadDb(p):
         backupfile = downloadLastBackup()
-        if dbExists(c.dbname):
-            runOrFail("dropdb --if-exists {dbname}", **c)
+        runOrFail("dropdb --if-exists {dbname}", **c)
         runOrFail("createdb {dbname}", **c)
         runOrFail("pv {} | zcat | psql -e {dbname}", backupfile, **c)
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
 def firstTimeSetup(p,c,results):
-    somenergiaConf = Path(c.virtualenvdir)/'conf'/'somenergia.conf'
+    somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
     if somenergiaConf.exists(): return
 
+    createLogDir(p,c,results)
+    generateErpConf(p,c,results)
+    setupDBUsers(p,c,results)
+
+def createLogDir(p,c,results):
     logdir = Path(c.virtualenvdir)/'var/log'
     logdir.mkdir(parents=True, exist_ok=True)
 
+def generateErpRunner(p,c,results):
+    runner = Path(c.virtualenvdir) / 'bin/erpserver'
+    runnerTemplate = srcdir / 'erpserver.in'
+    content = runnerTemplate.read_text(encoding='utf8').format(**c)
+    runner.write_text(content, encoding='utf8')
+    runner.chmod(0o744)
+
+def generateErpConf(p,c,results):
+    somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
     somenergiaConf.parent.mkdir(parents=True, exist_ok=True)
-    confTemplate = basedir / 'erp.conf'
+    confTemplate = srcdir / 'erp.conf'
     confContent = confTemplate.read_text(encoding='utf8').format(**c)
     somenergiaConf.write_text(confContent, encoding='utf8')
-    
-    #run('ssh somdevel@sf5.somenergia.coop -t "sudo -u erp cat /home/erp/conf/somenergia.conf" | tail -n +2 > $VIRTUAL_ENV/conf/somenergia.conf')
+
+def setupDBUsers(p,c,results):
+    # This requires the following line on the sudoers
+    # youruser  ALL = (postgres) /path/to/pgaduser.sh
 
     if c.systemUser not in p.postgresUsers:
         p.postgresUsers.append(c.systemUser)
 
-    step("Next command will need somdevel@sf5 password")
     for user in p.postgresUsers:
-        runOrFail("""sudo su -c 'echo "local all '{user}' peer" >> /etc/postgresql/*/main/pg_hba.conf'""", user=user, **c)
-        runOrFail("sudo -u postgres createuser -P -s {}", user)
+        runOrFail("sudo -u postgres {}/pgadduser.sh {}", srcdir, user)
 
 
 def deploy(p, results):
@@ -354,6 +372,8 @@ def deploy(p, results):
     if not dbExists(c.dbname) or c.updateDatabase:
         loadDb(p)
 
+    runOrFail("erpserver --update=all --stop-after-init")
+
     if not c.forceTest and not hasChanges(results):
         raise Exception("No changes")
 
@@ -373,17 +393,53 @@ c = ns(
     pgversion='9.5',
     skipPipUpgrade = True,
     forceTest = False,
+    keepDatabase = False,
     updateDatabase = False,
+    forceDownload = False,
+    reuseBackup = False,
     virtualenvdir = os.environ.get('VIRTUAL_ENV'),
     systemUser = os.environ.get('USER'),
 )
 c.update(**ns.load("config.yaml"))
 
 
-def main():
+@click.command(help="Executes a build setup/update of the erp")
+@click.option('--db','dbname',
+    metavar='DATABASE',
+    help='Name of the database',
+    )
+@click.option('--reusebackup', 'reuseBackup',
+    help='Skips database backup download and reuses the last one',
+    is_flag=True,
+    )
+@click.option('--forcedownload', 'forceDownload',
+    help="Forces the database backup download even if a local copy exists already",
+    is_flag=True,
+    )
+@click.option('--keepdb', 'keepDatabase',
+    help='Do not update data unless there is none',
+    is_flag=True,
+    )
+@click.option('--updatedb', 'updateDatabase',
+    help='Reloads the database even if it is uptodate',
+    is_flag=True,
+    )
+@click.option('--step', '-s', 'steps',
+    help='Run just those steps',
+    metavar='STEP',
+    multiple=True,
+    type=click.Choice([
+        'apt',
+        'pip',
+        'firsttime',
+        ]),
+    )
+def main(**kwds):
+    c.update((k,v) for k,v in kwds.items() if v is not None)
+    print(c.dump())
     results=ns()
     p = ns.load("project.yaml")
-
+    generateErpRunner(p,c,results)
     for repo in p.repositories:
         completeRepoData(repo)
 
@@ -394,15 +450,19 @@ def main():
 
     with cd(c.workingpath):
         deploy(p, results)
-        #testRepositories(p, results)
+        erpserver = subprocess.Popen('./erpserver')
+        testRepositories(p, results)
 
 
     results.dump("results.yaml")
     print summary(results)
 
 
+
+
 if __name__ == '__main__':
     main()
+
 
 
 # vim: et ts=4 sw=4

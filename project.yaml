@@ -5,11 +5,12 @@ ubuntuDependencies:
 - zlib1g-dev
 - postgresql-server-dev-all
 - libjpeg-dev
-- redis-server
+#- redis-server
 - postgresql
 - libffi-dev
 - mongodb-server
 - virtualenvwrapper
+- build-essential
 - gcc
 - g++
 - python-pip
@@ -24,11 +25,16 @@ predeploy: # TODO: Not used yet, see installCustomPdfGenerator
 - wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
 - wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
 - sudo dpkg -i libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
+# egenix-mx-base
+- wget https://files.pythonhosted.org/packages/66/e6/e0709aedeb4a5c92a1aeb8c47ab50e9506eafc865806801bd3f01d72b671/egenix-mx-base-3.2.9.zip
+- unzip egenix-mx-base-3.2.9.zip
+- cd egenix-mx-base-3.2.9
+- ./setup.py install
 
 pipDependencies:
 # client
 - pytz
-- egenix-mx-base
+#- egenix-mx-base==3.2.9 # TODO: see predeploy steps for egenix
 #- ruamel.venvgtk
 - pyOpenSSL
 # server
@@ -53,7 +59,7 @@ pipDependencies:
 - slugify
 - fuzzywuzzy
 - lockfile
-- marshmallow>2.0.0
+- marshmallow>=2.0.0
 - Python-Chart
 - reportlab>=3.0
 - osconf
@@ -62,10 +68,12 @@ pipDependencies:
 - pprintpp
 - autoworker
 - certifi
-- FACe_lib
 - python-sql
 - rednose
-- retrofix
+- retrofix # l10n_ES_cobros_ventanilla
+- pandas # by custom_search
+- python-magic # by facturae
+
 
 pretasks:
 - updateDatabase:
@@ -82,6 +90,13 @@ pretasks:
   - psql -d somenergia -c "UPDATE res_partner_address SET email = 'oriol.piera@somenergia.coop'"
 
 repositories:
+# TODO: requires permisions from gisce
+#- path: libfacturacioatr
+#  url: git@github.com:gisce/libFacturacioATR.git
+#  url: https://github.com/gisce/libFacturacioATR.git
+- path: erp
+  user: Som-Energia
+  branch: som_rolling
 - path: orakwlum_client
   url: git@github.com:gisce/orakWlum-client.git
 - path: CNMC-Client
@@ -103,8 +118,6 @@ repositories:
 - path: spawn_oop
 - path: ws_transactions
 - path: sepa
-- path: libfacturacioatr
-  url: git@github.com:gisce/libFacturacioATR.git
 - path: switching
 - path: libComXML
 - path: cchloader
@@ -130,9 +143,6 @@ repositories:
   user: Som-Energia
 - path: facturae
   user: totaler
-- path: erp
-  user: Som-Energia
-  branch: som_rolling
 - path: plantmeter
   user: Som-Energia
   tests:
@@ -148,8 +158,10 @@ repositories:
   tests:
   - ./setup.py test
 
-# Warning: in dependency order
+
 editablePackages:
+
+# Warning: in dependency order
 
 # gisce
 - aeroolib/aeroolib
@@ -162,11 +174,11 @@ editablePackages:
 - enerdata
 - arquia
 - ooop
-#- cchloader
-#- gestionatr
-#- empowering
-#- sii
-#- ooquery
+- empowering
+- cchloader
+- gestionatr
+- sii
+- ooquery
 
 # somenergia
 - sermepa
@@ -176,6 +188,7 @@ editablePackages:
 - amoniak
 - orakwlum_client
 - CNMC-Client
+
 
 postgresUsers:
 - somenergia
