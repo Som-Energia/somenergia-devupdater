@@ -5,9 +5,19 @@ Script to deploy/update the development environment
 
 ## Setup
 
+If your running user is not a full sudoer,
+add the following commands to `/etc/sudoers`
+(provided the user is `blamer` and this file is in /home/blamer/sandbox/somenergia-devupdater
+
+```
+blamer  ALL=NOPASSWD: /usr/bin/apt
+blamer  ALL=NOPASSWD: /usr/bin/dpkg
+blamer  ALL=(postgres) NOPASSWD: /home/blamer/sandbox/somenergia-devupdater/pgadduser.sh
+```
+
 - Create a config.yaml file like the one in config-example.yaml
 - `mkvirtualenv ci`
-- `pip install yamlns consolemsg`
+- `pip install yamlns consolemsg click`
 - `./update.py`
 
 
