@@ -144,7 +144,6 @@ repositories:
 - path: somenergia-utils
   user: Som-Energia
 - path: facturae
-  user: totaler
 - path: plantmeter
   user: Som-Energia
   tests:
