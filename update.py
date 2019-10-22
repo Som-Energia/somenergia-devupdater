@@ -45,6 +45,15 @@ def cd(path) :
         os.chdir(oldpath)
         #step("Back into {}",oldpath)
 
+@contextmanager
+def background(command) :
+    step("Launch in background: {}", command)
+    process = subprocess.Popen(command)
+    try:
+        yield process
+    finally:
+        process.terminate()
+
 def run(command, *args, **kwds):
     running(command, *args, **kwds)
     command = command.format(*args, **kwds)
@@ -106,9 +115,10 @@ def hasChanges(results):
 
 ### Git stuff
 
-def newCommitsFromRemote():
+def newCommitsFromRemote(repo):
     errorcode, output = run(
-        "git log HEAD..HEAD@{{upstream}} "
+        #"git log HEAD..HEAD@{{upstream}} " # old version
+        "git log ..origin "
             "--exit-code --pretty=format:'%h\t%ai\t%s'"
                 )
     return [
@@ -170,7 +180,7 @@ def cloneOrUpdateRepositories(p, results):
                     "in branch '{currentBranch}' instead of '{branch}'",
                     currentBranch=branch, **repo)
                 continue
-            repoChanges = newCommitsFromRemote()
+            repoChanges = newCommitsFromRemote(repo)
             if not repoChanges: continue
             changes[repo.path] = repoChanges
             step("Rebasing {path}",**repo)
@@ -397,6 +407,7 @@ c = ns(
     updateDatabase = False,
     forceDownload = False,
     reuseBackup = False,
+    skipErpUpdate = False,
     virtualenvdir = os.environ.get('VIRTUAL_ENV'),
     systemUser = os.environ.get('USER'),
 )
@@ -418,6 +429,10 @@ c.update(**ns.load("config.yaml"))
     )
 @click.option('--keepdb', 'keepDatabase',
     help='Do not update data unless there is none',
+    is_flag=True,
+    )
+@click.option('--skiperpupdate', 'skipErpUpdate',
+    help='Do not run update on erp modules to speedup execution when no modules have been updated',
     is_flag=True,
     )
 @click.option('--updatedb', 'updateDatabase',
@@ -450,8 +465,10 @@ def main(**kwds):
 
     with cd(c.workingpath):
         deploy(p, results)
-        erpserver = subprocess.Popen('./erpserver')
-        testRepositories(p, results)
+        if not c.skipErpUpdate:
+            runOrFail('erpserver --update=all --stop-after-init')
+        with background('erpserver'):
+            testRepositories(p, results)
 
 
     results.dump("results.yaml")

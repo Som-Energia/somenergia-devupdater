@@ -73,6 +73,8 @@ pipDependencies:
 - retrofix # l10n_ES_cobros_ventanilla
 - pandas # by custom_search
 - python-magic # by facturae
+- tqdm # by giscedata_sup_territorials_2013_tec271_comer
+
 
 
 pretasks:
@@ -188,6 +190,7 @@ editablePackages:
 - amoniak
 - orakwlum_client
 - CNMC-Client
+- somenergia-utils
 
 
 postgresUsers:

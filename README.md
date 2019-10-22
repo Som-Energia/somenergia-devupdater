@@ -17,10 +17,8 @@ blamer  ALL=(postgres) NOPASSWD: /home/blamer/sandbox/somenergia-devupdater/pgad
 
 - Create a config.yaml file like the one in config-example.yaml
 - `mkvirtualenv ci`
-- `pip install yamlns consolemsg click`
+- `pip install yamlns consolemsg click emili`
 - `./update.py`
-
-
 
 
 ## Use cases
