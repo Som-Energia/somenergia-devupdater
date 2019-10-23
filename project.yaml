@@ -44,6 +44,7 @@ pipDependencies:
 - pydot
 - psycopg2<2.8
 - blinker
+- arrow
 - Babel
 - pymongo<3.0
 - rq<1.0
@@ -74,7 +75,10 @@ pipDependencies:
 - pandas # by custom_search
 - python-magic # by facturae
 - tqdm # by giscedata_sup_territorials_2013_tec271_comer
-
+- pyreemote # de la wiki
+- oopgrade # de la wiki
+- pypdftk # de la wiki
+- dm.xmlsec.binding
 
 
 pretasks:
@@ -164,6 +168,14 @@ repositories:
   tests:
   - nosetests generationkwh
   - nosetests scripts/
+- path: sermepa # webforms
+  user: Som-Energia
+  tests:
+  - ./setup.py test
+- path: FACe_lib
+- path: FACe_signer
+- path: giscedata_facturacio_indexada_som
+  user: Som-Energia
 
 
 editablePackages:
@@ -197,6 +209,7 @@ editablePackages:
 - orakwlum_client
 - CNMC-Client
 - somenergia-utils
+
 
 
 postgresUsers:
