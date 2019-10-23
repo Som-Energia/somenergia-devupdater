@@ -379,7 +379,7 @@ def deploy(p, results):
 
     firstTimeSetup(p,c,results)
 
-    if not dbExists(c.dbname) or c.updateDatabase:
+    if not dbExists(c.dbname) or not c.keepDatabase:
         loadDb(p)
 
     runOrFail("erpserver --update=all --stop-after-init")
@@ -404,7 +404,6 @@ c = ns(
     skipPipUpgrade = True,
     forceTest = False,
     keepDatabase = False,
-    updateDatabase = False,
     forceDownload = False,
     reuseBackup = False,
     skipErpUpdate = False,
@@ -433,10 +432,6 @@ c.update(**ns.load("config.yaml"))
     )
 @click.option('--skiperpupdate', 'skipErpUpdate',
     help='Do not run update on erp modules to speedup execution when no modules have been updated',
-    is_flag=True,
-    )
-@click.option('--updatedb', 'updateDatabase',
-    help='Reloads the database even if it is uptodate',
     is_flag=True,
     )
 @click.option('--step', '-s', 'steps',
