@@ -25,14 +25,18 @@ venv = checkInVirtualEnvironment()
 print("Using venv: {}".format(os.path.basename(venv)))
 
 import subprocess
+import time
+import socket
 from contextlib import contextmanager
 from yamlns import namespace as ns
 from consolemsg import step, error, warn, fail, success, color, printStdError
+
 
 srcdir = Path(__file__).absolute().parent
 
 def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
+
 
 @contextmanager
 def cd(path) :
@@ -52,6 +56,7 @@ def background(command) :
     try:
         yield process
     finally:
+        step("Terminating: {}", command)
         process.terminate()
 
 def run(command, *args, **kwds):
@@ -351,8 +356,26 @@ def setupDBUsers(p,c,results):
     for user in p.postgresUsers:
         runOrFail("sudo -u postgres {}/pgadduser.sh {}", srcdir, user)
 
+def isErpPortOpen():
+    try:
+        s = socket.create_connection(('localhost', c.erpport), timeout=4)
+    except socket.error as ex:
+        return False
+    s.close()
+    return True
+
+def waitErpOpen():
+    for i in range(c.erpStartupTimeout):
+        if isErpPortOpen():
+            return True
+        time.sleep(1)
+    return False
 
 def deploy(p, results):
+    if c.skipDeploy:
+        warn("Deployment skipped")
+        return
+
     missingApt = missingAptPackages(p.ubuntuDependencies)
     if missingApt:
         aptInstall(p.ubuntuDependencies)
@@ -366,7 +389,9 @@ def deploy(p, results):
 
     cloneOrUpdateRepositories(p, results)
 
-    if not c.skipPipUpgrade:
+    if c.skipPipUpgrade:
+        warn("Skiping pip editables install")
+    else:
         # TODO: Just the ones updated or cloned
         for path in p.editablePackages:
             installEditable(path)
@@ -379,7 +404,9 @@ def deploy(p, results):
 
     firstTimeSetup(p,c,results)
 
-    if not dbExists(c.dbname) or not c.keepDatabase:
+    if dbExists(c.dbname) and c.keepDatabase:
+        warn("Keeping existing database")
+    else:
         loadDb(p)
 
     runOrFail("erpserver --update=all --stop-after-init")
@@ -401,14 +428,17 @@ c = ns(
     email='someone@somewhere.net',
     dbname='somenergia',
     pgversion='9.5',
+    erpport=18069,
     skipPipUpgrade = True,
     forceTest = False,
     keepDatabase = False,
     forceDownload = False,
     reuseBackup = False,
+    skipDeploy = False,
     skipErpUpdate = False,
     virtualenvdir = os.environ.get('VIRTUAL_ENV'),
     systemUser = os.environ.get('USER'),
+    erpStartupTimeout = 30,
 )
 c.update(**ns.load("config.yaml"))
 
@@ -417,6 +447,10 @@ c.update(**ns.load("config.yaml"))
 @click.option('--db','dbname',
     metavar='DATABASE',
     help='Name of the database',
+    )
+@click.option('--skipdeploy', 'skipDeploy',
+    help='Skips initial deployment altogether',
+    is_flag=True,
     )
 @click.option('--reusebackup', 'reuseBackup',
     help='Skips database backup download and reuses the last one',
@@ -460,9 +494,18 @@ def main(**kwds):
 
     with cd(c.workingpath):
         deploy(p, results)
+
         if not c.skipErpUpdate:
             runOrFail('erpserver --update=all --stop-after-init')
+
+        if isErpPortOpen():
+            fail("Another erp instance is using the port")
+
         with background('erpserver'):
+            if not waitErpOpen():
+                fail("Erp took more than {} seconds to startup"
+                    .format(c.erpStartupTimeout))
+
             testRepositories(p, results)
 
 
