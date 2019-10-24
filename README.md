@@ -5,24 +5,9 @@ Script to deploy/update the development environment
 
 ## Setup
 
-- Create a passwordless ssh key:
-  ```bash
-  ssh-keygen
-  ```
-- Add the new key at `~/.ssh/id_rsa.pub` it to Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
-
-- Create a directory for the repositories, for example`~/somenergia/`:
-
-``` 
-mkdir somenergia
-cd somenergia/
-```
-
-
-
-If your running user is not a full sudoer,
-add the following commands to `/etc/sudoers`
-(provided the user is `blamer` and this file is in /home/blamer/sandbox/somenergia-devupdater
+Some of the performed actions require sudo, if you want to make the script run unattended,
+you should at least make the executing user sudoer for specific commands in `/etc/sudoers`
+(provided the user is `blamer` and this file is in /home/blamer/sandbox/somenergia-devupdater):
 
 ```
 blamer  ALL=NOPASSWD: /usr/bin/apt
@@ -30,10 +15,33 @@ blamer  ALL=NOPASSWD: /usr/bin/dpkg
 blamer  ALL=(postgres) NOPASSWD: /home/blamer/sandbox/somenergia-devupdater/pgadduser.sh
 ```
 
-- Create a config.yaml file like the one in config-example.yaml
-- `mkvirtualenv ci`
-- `pip install yamlns consolemsg click emili`
-- `./update.py`
+- Create a passwordless ssh key:
+  ```bash
+  ssh-keygen
+  ssh-copy-id somdevel@sf5.somenergia.coop
+  ```
+- Add the new key at `~/.ssh/id_rsa.pub` it to Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+
+``` bash
+sudo apt install virtualenvwrapper git
+bash # to load virtualenvwrapper
+mkvirtualenv -p $(which python2) erp
+pip install yamlns consolemsg pathlib2 click emili
+
+WORKINGDIR=~/somenergia
+mkdir $WORKINGDIR
+cd $WORKINGDIR
+git clone git@github.com:Som-Energia/somenergia-devupdater.git
+cd somenergia-devupdater/
+```
+- copy config-example.yaml as config.yaml and change email, workingpath, dbname and dbuser.
+
+Once configured just run, and wait... waiit.....
+
+```bash
+./update.py
+```
+
 
 
 ## Use cases
