@@ -148,11 +148,12 @@ repositories:
   user: Som-Energia
   tests:
   - ./setup.py test
-- path: webforms
-  user: Som-Energia
-  branch: API
-  tests:
-  - ./setup.py test
+# TODO: Pemissions required
+#- path: webforms
+#  user: Som-Energia
+#  branch: API
+#  tests:
+#  - ./setup.py test
 - path: plantmeter
   user: Som-Energia
   tests:
