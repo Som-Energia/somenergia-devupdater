@@ -5,6 +5,21 @@ Script to deploy/update the development environment
 
 ## Setup
 
+- Create a passwordless ssh key:
+  ```bash
+  ssh-keygen
+  ```
+- Add the new key at `~/.ssh/id_rsa.pub` it to Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+
+- Create a directory for the repositories, for example`~/somenergia/`:
+
+``` 
+mkdir somenergia
+cd somenergia/
+```
+
+
+
 If your running user is not a full sudoer,
 add the following commands to `/etc/sudoers`
 (provided the user is `blamer` and this file is in /home/blamer/sandbox/somenergia-devupdater
