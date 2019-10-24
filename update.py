@@ -360,6 +360,8 @@ def createLogDir(p,c,results):
     logdir.mkdir(parents=True, exist_ok=True)
 
 def generateErpRunner(p,c,results):
+    "Generates an erp server runner based on the .in template"
+
     runner = Path(c.virtualenvdir) / 'bin/erpserver'
     runnerTemplate = srcdir / 'erpserver.in'
     content = runnerTemplate.read_text(encoding='utf8').format(**c)
@@ -367,6 +369,8 @@ def generateErpRunner(p,c,results):
     runner.chmod(0o744)
 
 def generateErpConf(p,c,results):
+    "Generates an erp conf file based on the .in template"
+
     somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
     somenergiaConf.parent.mkdir(parents=True, exist_ok=True)
     confTemplate = srcdir / 'erp.conf'
