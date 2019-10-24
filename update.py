@@ -27,9 +27,11 @@ print("Using venv: {}".format(os.path.basename(venv)))
 import subprocess
 import time
 import socket
+import os
+import signal
 from contextlib import contextmanager
 from yamlns import namespace as ns
-from consolemsg import step, error, warn, fail, success, color, printStdError
+from consolemsg import step, error, warn, fail, success, color, printStdError, u
 
 
 srcdir = Path(__file__).absolute().parent
@@ -52,41 +54,75 @@ def cd(path) :
 @contextmanager
 def background(command) :
     step("Launch in background: {}", command)
-    process = subprocess.Popen(command)
+    process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
     try:
         yield process
     finally:
         step("Terminating: {}", command)
-        process.terminate()
+        os.killpg(os.getpgid(process.pid), signal.SIGHUP)
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        process.wait()
 
-def run(command, *args, **kwds):
+
+def baseRun(command, *args, **kwds):
     running(command, *args, **kwds)
     command = command.format(*args, **kwds)
-    try:
-        output = subprocess.check_output(command, shell=True)
-        return 0, output
-    except subprocess.CalledProcessError as e:
-        return e.returncode, e.output
+    process = subprocess.Popen(command, shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=0,
+        universal_newlines=True,
+        )
+    outlines = []
+    errlines = []
+    mixlines = []
+
+    def doline(line, ostream, lines):
+        if not line: return
+        line = u(line)
+        ostream.write(line)
+        lines.append(line)
+        mixlines.append(line)
+
+    while process.poll() is None:
+        doline(process.stdout.readline(), sys.stdout, outlines)
+        doline(process.stderr.readline(), sys.stderr, errlines)
+    doline(process.stdout.read(), sys.stdout, outlines)
+    doline(process.stderr.read(), sys.stderr, errlines)
+
+    return process.returncode, outlines, errlines, mixlines
+
+
+def captureOrFail(command, *args, **kwds):
+    code, out, err, mix = baseRun(command, *args, **kwds)
+    if code:
+        fail(u''.join(err))
+    return u''.join(out)
 
 def runOrFail(command, *args, **kwds):
-    err, output = run(command, *args, **kwds)
-    if not err: return output
-    fail(output)
+    code, out, err, mix = baseRun(command, *args, **kwds)
+    if code:
+        fail(u''.join(err))
+
+def runAndCheck(command, *args, **kwds):
+    code, out, err, mix = baseRun(command, *args, **kwds)
+    return err
+
 
 def runTests(repo):
     errors = []
     for command in repo.tests:
-        try:
-            step("Running: {}", command)
-            commandResult = ns(command=command)
-            errors.append(commandResult)
-            subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
+        step("Running: {}", command)
+        commandResult = ns(command=command)
+        errors.append(commandResult)
+        code, out, err, mix = baseRun(command)
+        if code:
             error("Test failed: {}", command)
             commandResult.update(
                 failed = True,
-                errorcode=e.returncode,
-                output = e.output,
+                errorcode=code,
+                output = mix,
             )
     return errors
 
@@ -121,11 +157,12 @@ def hasChanges(results):
 ### Git stuff
 
 def newCommitsFromRemote(repo):
-    errorcode, output = run(
+    output = captureOrFail(
         #"git log HEAD..HEAD@{{upstream}} " # old version
-        "git log ..origin "
+        "git log ..origin/{branch} "
             "--exit-code --pretty=format:'%h\t%ai\t%s'"
-                )
+            .format(**repo))
+
     return [
         ns(
             id=id,
@@ -139,20 +176,16 @@ def newCommitsFromRemote(repo):
     ]
 
 def rebase():
-    errorcode, output = run("git rebase")
+    errorcode, _,_, mix = baseRun("git rebase")
     if errorcode:
-        error("Aborting failed rebase.\n{}",output)
-        run("git rebase --abort")
+        error("Aborting failed rebase.\n{}",mix)
+        runOrFail("git rebase --abort")
 
 def fetch():
-    errorcode, output = run(
-        "git fetch --all")
+    runOrFail("git fetch --all")
 
 def currentBranch():
-    errorcode, output = run(
-        "git rev-parse --abbrev-ref HEAD")
-    # TODO: errors unmanaged
-    return output.strip()
+    return captureOrFail("git rev-parse --abbrev-ref HEAD").strip()
 
 def clone(repository):
     """
@@ -198,7 +231,7 @@ def cloneOrUpdateRepositories(p, results):
 def installEditable(path):
     step("Install editable repository {}", path)
     with cd(path):
-        run("pip install -e .")
+        runOrFail("pip install -e .")
 
 def pipPackages():
     """
@@ -207,10 +240,8 @@ def pipPackages():
     package name, current version, available version,
     type and optionally the editable path.
     """
-
-    err, output = run("pip list -o --exclude-editable --format=columns")
-    if err:
-        error("Failed to get list of pip packages")
+    step("Optaining pip packages status")
+    output = captureOrFail("pip list -o --exclude-editable --format=columns")
     lines = output.splitlines()
     return [
         ns(
@@ -247,10 +278,7 @@ def pipInstallUpgrade(packages, results):
     changes = results.setdefault('changes',ns())
 
     packages = ' '.join(["'{}'".format(x) for x in packages])
-    err, output = run('pip install --upgrade {}', packages)
-    if err:
-        error("Error upgrading pip packages")
-        fail(output)
+    runOrFail('pip install --upgrade {}', packages)
 
 def missingPipPackages(required):
     installed = [
@@ -269,23 +297,21 @@ def missingPipPackages(required):
 def aptInstall(packages):
     packages=' '.join(packages)
     step("Installing debian dependencies: {}",packages)
-    er, out=run("sudo apt install {}", packages)
-    if not er: return
-    error("Unable to install debian packages:\n{}", out)
+    runOrFail("sudo apt install {}", packages)
 
 def missingAptPackages(packages):
     step("Checking missing debian packages")
-    er, out = run("dpkg-query -W  -f '${{package}}\\n' {}",
+    out = captureOrFail("dpkg-query -W  -f '${{package}}\\n' {}",
         " ".join(packages))
     present = out.split()
     return [p for p in packages if p not in present]
 
 def installCustomPdfGenerator():
     step("Installing custom wkhtmltopdf")
-    run("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
-    run("wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb")
-    run("sudo dpkg -i libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
-    run("rm libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+    runOrFail("wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+    runOrFail("wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb")
+    runOrFail("sudo dpkg -i libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
+    runOrFail("rm libpng12-0_1.2.54-1ubuntu1.1_amd64.deb wkhtmltox-0.12.2.1_linux-trusty-amd64.deb")
 
 
 ### Database stuff
@@ -308,7 +334,7 @@ def downloadLastBackup():
     return backupfile
 
 def dbExists(dbname):
-    err, out = run("""psql postgres -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
+    out = captureOrFail("""psql postgres -tAc "SELECT 1 FROM pg_database WHERE datname='{}'" """,
         dbname)
     return out.strip()=="1"
 
@@ -409,11 +435,6 @@ def deploy(p, results):
     else:
         loadDb(p)
 
-    runOrFail("erpserver --update=all --stop-after-init")
-
-    if not c.forceTest and not hasChanges(results):
-        raise Exception("No changes")
-
 
 
 def completeRepoData(repository):
@@ -452,6 +473,14 @@ c.update(**ns.load("config.yaml"))
     help='Skips initial deployment altogether',
     is_flag=True,
     )
+@click.option('--skippip', 'skipPipUpgrade',
+    help='Skips upgrading the pip packages',
+    is_flag=True,
+    )
+@click.option('--keepdb', 'keepDatabase',
+    help='Keeps the existing database unless it does not exist',
+    is_flag=True,
+    )
 @click.option('--reusebackup', 'reuseBackup',
     help='Skips database backup download and reuses the last one',
     is_flag=True,
@@ -460,23 +489,9 @@ c.update(**ns.load("config.yaml"))
     help="Forces the database backup download even if a local copy exists already",
     is_flag=True,
     )
-@click.option('--keepdb', 'keepDatabase',
-    help='Do not update data unless there is none',
-    is_flag=True,
-    )
 @click.option('--skiperpupdate', 'skipErpUpdate',
     help='Do not run update on erp modules to speedup execution when no modules have been updated',
     is_flag=True,
-    )
-@click.option('--step', '-s', 'steps',
-    help='Run just those steps',
-    metavar='STEP',
-    multiple=True,
-    type=click.Choice([
-        'apt',
-        'pip',
-        'firsttime',
-        ]),
     )
 def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
@@ -497,6 +512,9 @@ def main(**kwds):
 
         if not c.skipErpUpdate:
             runOrFail('erpserver --update=all --stop-after-init')
+
+        if not c.forceTest and not hasChanges(results):
+            raise Exception("No changes")
 
         if isErpPortOpen():
             fail("Another erp instance is using the port")

@@ -144,20 +144,25 @@ repositories:
 - path: somenergia-utils
   user: Som-Energia
 - path: facturae
-- path: plantmeter
-  user: Som-Energia
-  tests:
-  - nosetests plantmeter --verbose
-  - nosetests scripts/
-- path: somenergia-generationkwh
-  user: Som-Energia
-  tests:
-  - nosetests generationkwh --verbose
-  - nosetests scripts/
 - path: sermepa # webforms
   user: Som-Energia
   tests:
   - ./setup.py test
+- path: webforms
+  user: Som-Energia
+  branch: API
+  tests:
+  - ./setup.py test
+- path: plantmeter
+  user: Som-Energia
+  tests:
+  - nosetests plantmeter
+  - nosetests som_plantmeter/tests
+- path: somenergia-generationkwh
+  user: Som-Energia
+  tests:
+  - nosetests generationkwh
+  - nosetests scripts/
 
 
 editablePackages:
@@ -180,6 +185,7 @@ editablePackages:
 - gestionatr
 - sii
 - ooquery
+- erppeek_wst
 
 # somenergia
 - sermepa

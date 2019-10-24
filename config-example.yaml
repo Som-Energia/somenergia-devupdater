@@ -1,10 +1,15 @@
 workingpath: /wherever/you/want/to/deploy
 email: you@somenergia.coop
-pgversion: '9.5'
+erpport: 18069
 dbname: somenergia_ci
+dbuser: myuser
+dbpass: False
+dbhost: False
+empoweringCompany: '9993331111'
 
-skipPipUpgrade: False
-forceTest: False # Run tests even if no changes detected
-skipTests: True
-updateDatabase: True
-
+#skipDeploy: True # Just run the tests
+#skipPipUpgrade: True # Do not upgrade Python packages
+#keepDatabase: True # Do not reload the db if it exists
+#reuseBackup: True # Uses the oldest local tarball to update de db
+#forceDownload: True # Even if the local db backup exists download it
+#forceTest: True # Run tests even if no changes detected
