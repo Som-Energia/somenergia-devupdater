@@ -2,12 +2,11 @@
 
 import os
 import sys
-import click
-
-try:
-    from pathlib2 import Path
-except ImportError: 
-    from pathlib import Path
+import subprocess
+from contextlib import contextmanager
+import time
+import socket
+import signal
 
 def checkInVirtualEnvironment():
     venv = os.environ.get('VIRTUAL_ENV',None)
@@ -16,7 +15,7 @@ def checkInVirtualEnvironment():
         "\033[31;1m"
         "You need to use a virtual env, create it with mkvirtualenv\n"
         " $ mkvirtualenv -p $(which python2) --system-site-packages erp\n"
-        " (erp)$ pip install yamlns consolemsg\n"
+        " (erp)$ pip install yamlns consolemsg pathlib2 click\n"
         "\033[0m"
     )
     sys.exit(-1)
@@ -24,14 +23,18 @@ def checkInVirtualEnvironment():
 venv = checkInVirtualEnvironment()
 print("Using venv: {}".format(os.path.basename(venv)))
 
-import subprocess
-import time
-import socket
-import os
-import signal
-from contextlib import contextmanager
-from yamlns import namespace as ns
-from consolemsg import step, error, warn, fail, success, color, printStdError, u
+try:
+    from pathlib2 import Path
+    import click
+    from yamlns import namespace as ns
+    from consolemsg import error, warn, fail, success, color, printStdError
+except ImportError:
+    print(
+        "\033[31;1m"
+        "You need to manually install those use pip packages\n"
+        " (erp)$ pip install yamlns consolemsg pathlib2 click\n"
+        "\033[0m"
+    )
 
 
 srcdir = Path(__file__).absolute().parent
