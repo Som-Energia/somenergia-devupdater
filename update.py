@@ -126,8 +126,6 @@ def runTests(repo):
             )
     return errors
 
-# TODO: start/stopService
-
 def testRepositories(p, results):
 
     results.failures=ns()
