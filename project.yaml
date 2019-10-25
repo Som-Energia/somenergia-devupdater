@@ -97,9 +97,9 @@ pretasks:
 
 repositories:
 # TODO: requires permisions from gisce
-#- path: libfacturacioatr
-#  url: git@github.com:gisce/libFacturacioATR.git
-#  url: https://github.com/gisce/libFacturacioATR.git
+- path: libfacturacioatr
+  url: git@github.com:gisce/libFacturacioATR.git
+  #  url: https://github.com/gisce/libFacturacioATR.git
 - path: erp
   user: Som-Energia
   branch: som_rolling

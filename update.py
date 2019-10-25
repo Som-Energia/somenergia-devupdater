@@ -27,7 +27,7 @@ try:
     from pathlib2 import Path
     import click
     from yamlns import namespace as ns
-    from consolemsg import error, warn, step, fail, success, color, printStdError
+    from consolemsg import error, warn, step, fail, success, color, printStdError, u
 except ImportError:
     print(
         "\033[31;1m"
