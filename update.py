@@ -103,6 +103,10 @@ def captureOrFail(command, *args, **kwds):
         fail(u''.join(err))
     return u''.join(out)
 
+def captureAndGo(command, *args, **kwds):
+    code, out, err, mix = baseRun(command, *args, **kwds)
+    return u''.join(out)
+
 def runOrFail(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
     if code:
@@ -302,7 +306,7 @@ def aptInstall(packages):
 
 def missingAptPackages(packages):
     step("Checking missing debian packages")
-    out = captureOrFail("dpkg-query -W  -f '${{package}}\\n' {}",
+    out = captureAndGo("dpkg-query -W  -f '${{package}}\\n' {}",
         " ".join(packages))
     present = out.split()
     return [p for p in packages if p not in present]
