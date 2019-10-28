@@ -100,22 +100,29 @@ def baseRun(command, *args, **kwds):
 def captureOrFail(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
     if code:
-        fail(u''.join(err))
+        error("Command failed with code {}: {}\n{}",
+            code,
+            command.format(*args, **kwds),
+            u''.join(err))
+        fail("Exiting with failure")
     return u''.join(out)
 
 def captureAndGo(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
+        warn("Command failed with code {}: {}\n{}",
+            code,
+            command.format(*args, **kwds),
+            u''.join(mix))
     return u''.join(out)
 
 def runOrFail(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
     if code:
-        fail(u''.join(err))
-
-def runAndCheck(command, *args, **kwds):
-    code, out, err, mix = baseRun(command, *args, **kwds)
-    return err
-
+        error("Command failed with code {}: {}\n{}",
+            code,
+            command.format(*args, **kwds),
+            u''.join(err))
+        fail("Exiting with failure")
 
 def runTests(repo):
     errors = []
