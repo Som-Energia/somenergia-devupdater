@@ -544,7 +544,7 @@ def main(**kwds):
 
 
     results.dump("results.yaml")
-    print summary(results)
+    print(summary(results))
 
 
 
