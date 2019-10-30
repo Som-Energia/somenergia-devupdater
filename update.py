@@ -109,6 +109,7 @@ def captureOrFail(command, *args, **kwds):
 
 def captureAndGo(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
+    if code:
         warn("Command failed with code {}: {}\n{}",
             code,
             command.format(*args, **kwds),
