@@ -171,8 +171,8 @@ def hasChanges(results):
 def newCommitsFromRemote(repo):
     output = captureOrFail(
         #"git log HEAD..HEAD@{{upstream}} " # old version
-        "git log ..origin/{branch} "
-            "--exit-code --pretty=format:'%h\t%ai\t%s'"
+        "git log {branch}..origin/{branch} "
+            " --pretty=format:'%h\t%ai\t%s'"
             .format(**repo))
 
     return [
