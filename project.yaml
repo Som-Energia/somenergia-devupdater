@@ -143,8 +143,6 @@ repositories:
 - path: amoniak
   user: Som-Energia
 - path: erppeek_wst
-  user: Som-Energia
-  branch: ws_transaction
 - path: somenergia-utils
   user: Som-Energia
 - path: facturae
