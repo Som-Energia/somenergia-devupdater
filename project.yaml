@@ -79,6 +79,7 @@ pipDependencies:
 - oopgrade # de la wiki
 - pypdftk # de la wiki
 - dm.xmlsec.binding
+- erppeek<1.7 # erppeek incompatible with erppeek>=1.7
 
 
 pretasks:
