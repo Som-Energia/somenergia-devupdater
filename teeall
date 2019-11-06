@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+"${@:2}" 2>&1 | tee "$1"
+result="${PIPESTATUS}"
+echo $result
+exit $result
+
