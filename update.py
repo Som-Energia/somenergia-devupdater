@@ -547,6 +547,8 @@ def main(**kwds):
     results.dump("results.yaml")
     print(summary(results))
 
+    if results.failures:
+        sys.exit(-1)
 
 
 
