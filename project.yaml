@@ -175,6 +175,10 @@ repositories:
 - path: FACe_signer
 - path: giscedata_facturacio_indexada_som
   user: Som-Energia
+- path: somenergia-tomatic
+  user: Som-Energia
+  tests:
+  - nosetests
 
 
 editablePackages:
