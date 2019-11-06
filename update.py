@@ -47,21 +47,21 @@ def running(command, *args, **kwds) :
 def cd(path) :
     oldpath = os.getcwd()
     os.chdir(path)
-    step("Entering {}",os.getcwd())
+    running("cd {}",os.getcwd())
     try:
         yield
     finally:
         os.chdir(oldpath)
-        #step("Back into {}",oldpath)
+        running("cd {}",os.getcwd())
 
 @contextmanager
 def background(command) :
-    step("Launch in background: {}", command)
+    running("[Background] {}", command)
     process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
     try:
         yield process
     finally:
-        step("Terminating: {}", command)
+        running("Terminating: {}", command)
         os.killpg(os.getpgid(process.pid), signal.SIGHUP)
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
