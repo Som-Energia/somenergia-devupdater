@@ -166,7 +166,7 @@ repositories:
   user: Som-Energia
   tests:
   - nosetests generationkwh
-  - nosetests scripts/
+  - nosetests som_generationkwh/test
 - path: sermepa # webforms
   user: Som-Energia
   tests:
