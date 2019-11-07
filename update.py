@@ -89,9 +89,17 @@ def baseRun(command, *args, **kwds):
         lines.append(line)
         mixlines.append(line)
 
+    import select
+    poll = select.poll()
+    poll.register(process.stdout.fileno())
+    poll.register(process.stderr.fileno())
+
     while process.poll() is None:
-        doline(process.stdout.readline(), sys.stdout, outlines)
-        doline(process.stderr.readline(), sys.stderr, errlines)
+        for fd, flags in poll.poll():
+            if fd == process.stdout.fileno():
+                doline(process.stdout.readline(), sys.stdout, outlines)
+            if fd == process.stderr.fileno():
+                doline(process.stderr.readline(), sys.stderr, errlines)
     doline(process.stdout.read(), sys.stdout, outlines)
     doline(process.stderr.read(), sys.stderr, errlines)
 
