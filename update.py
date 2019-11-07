@@ -86,6 +86,7 @@ def baseRun(command, *args, **kwds):
         if not line: return
         line = u(line)
         ostream.write(line)
+        ostream.flush()
         lines.append(line)
         mixlines.append(line)
 
