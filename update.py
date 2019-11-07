@@ -35,6 +35,7 @@ except ImportError:
         " (erp)$ pip install yamlns consolemsg pathlib2 click\n"
         "\033[0m"
     )
+    sys.exit(-1)
 
 
 srcdir = Path(__file__).absolute().parent
