@@ -57,6 +57,17 @@ def running(command, *args, **kwds) :
         command=command.format(*args, **kwds),
     ))
 
+def endrun(errorcode, outlines, errlines, mixlines):
+    failed = errorcode != 0
+    outlines, errlines, mixlines = (u''.join(l) for l in (outlines, errlines, mixlines))
+    if failed:
+        progress.steps[-1].commands[-1].update(
+            failed = True,
+            output = u''.join(mixlines)
+        )
+
+    return errorcode, outlines, errlines, mixlines
+
 
 @contextmanager
 def cd(path) :
@@ -118,7 +129,7 @@ def baseRun(command, *args, **kwds):
     doline(process.stdout.read(), sys.stdout, outlines)
     doline(process.stderr.read(), sys.stderr, errlines)
 
-    return process.returncode, outlines, errlines, mixlines
+    return endrun(process.returncode, outlines, errlines, mixlines)
 
 
 def captureOrFail(command, *args, **kwds):
@@ -127,9 +138,9 @@ def captureOrFail(command, *args, **kwds):
         error("Command failed with code {}: {}\n{}",
             code,
             command.format(*args, **kwds),
-            u''.join(err))
+            err)
         fail("Exiting with failure")
-    return u''.join(out)
+    return out
 
 def captureAndGo(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
@@ -137,8 +148,8 @@ def captureAndGo(command, *args, **kwds):
         warn("Command failed with code {}: {}\n{}",
             code,
             command.format(*args, **kwds),
-            u''.join(mix))
-    return u''.join(out)
+            mix)
+    return out
 
 def runOrFail(command, *args, **kwds):
     code, out, err, mix = baseRun(command, *args, **kwds)
@@ -146,7 +157,7 @@ def runOrFail(command, *args, **kwds):
         error("Command failed with code {}: {}\n{}",
             code,
             command.format(*args, **kwds),
-            u''.join(err))
+            err)
         fail("Exiting with failure")
 
 def runTests(repo):
@@ -160,7 +171,7 @@ def runTests(repo):
             commandResult.update(
                 failed = True,
                 errorcode=code,
-                output = u''.join(mix),
+                output = mix,
             )
     return errors
 
