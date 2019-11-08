@@ -27,7 +27,7 @@ try:
     from pathlib2 import Path
     import click
     from yamlns import namespace as ns
-    from consolemsg import error, warn, step, fail, success, color, printStdError, u
+    from consolemsg import error, warn, step as _step, fail, success, color, printStdError, u
 except ImportError:
     print(
         "\033[31;1m"
@@ -40,8 +40,22 @@ except ImportError:
 
 srcdir = Path(__file__).absolute().parent
 
+progress = ns(steps=[])
+
+def step(description, *args, **kwds):
+    _step(description, *args, **kwds)
+    progress.steps.append(ns(
+        name=description.format(*args,**kwds),
+        commands=[],
+    ))
+
 def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
+    if not progress.steps:
+        step("Unnamed")
+    progress.steps[-1].commands.append(ns(
+        command=command.format(*args, **kwds),
+    ))
 
 
 @contextmanager
@@ -138,7 +152,6 @@ def runOrFail(command, *args, **kwds):
 def runTests(repo):
     errors = []
     for command in repo.tests:
-        step("Running: {}", command)
         commandResult = ns(command=command)
         errors.append(commandResult)
         code, out, err, mix = baseRun(command)
@@ -384,6 +397,7 @@ def createLogDir(p,c,results):
 def generateErpRunner(p,c,results):
     "Generates an erp server runner based on the .in template"
 
+    step("Generating Erp Runner")
     runner = Path(c.virtualenvdir) / 'bin/erpserver'
     runnerTemplate = srcdir / 'erpserver.in'
     content = runnerTemplate.read_text(encoding='utf8').format(**c)
@@ -393,6 +407,7 @@ def generateErpRunner(p,c,results):
 def generateErpConf(p,c,results):
     "Generates an erp conf file based on the .in template"
 
+    step("Generating Erp Configuration")
     somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
     somenergiaConf.parent.mkdir(parents=True, exist_ok=True)
     confTemplate = srcdir / 'erp.conf'
@@ -523,7 +538,10 @@ c.update(**ns.load("config.yaml"))
 def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
-    results=ns()
+    results=ns(
+        progress = progress,
+    )
+
     p = ns.load("project.yaml")
     for repo in p.repositories:
         completeRepoData(repo)
