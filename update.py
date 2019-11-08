@@ -147,7 +147,7 @@ def runTests(repo):
             commandResult.update(
                 failed = True,
                 errorcode=code,
-                output = mix,
+                output = u''.join(mix),
             )
     return errors
 
