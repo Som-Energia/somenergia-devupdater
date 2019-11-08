@@ -525,7 +525,6 @@ def main(**kwds):
     print(c.dump())
     results=ns()
     p = ns.load("project.yaml")
-    generateErpRunner(p,c,results)
     for repo in p.repositories:
         completeRepoData(repo)
 
@@ -535,6 +534,7 @@ def main(**kwds):
         pass
 
     with cd(c.workingpath):
+        generateErpRunner(p,c,results)
         deploy(p, results)
 
         if not c.skipErpUpdate:
@@ -552,7 +552,6 @@ def main(**kwds):
                     .format(c.erpStartupTimeout))
 
             testRepositories(p, results)
-
 
     results.dump("results.yaml")
     print(summary(results))
