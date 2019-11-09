@@ -389,7 +389,7 @@ def loadDb(p):
         backupfile = downloadLastBackup()
         runOrFail("dropdb --if-exists {dbname}", **c)
         runOrFail("createdb {dbname}", **c)
-        runOrFail("pv {} | zcat | psql -e {dbname}", backupfile, **c)
+        runOrFail("pv -f {} | zcat | psql -e {dbname}", backupfile, **c)
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
 
 
