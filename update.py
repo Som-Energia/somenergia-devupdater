@@ -479,7 +479,7 @@ def deploy(p, results):
 
     # TODO: Just a first time or if one repo is cloned
     with cd('erp'):
-        runOrFail("./tools/link_addons.sh")
+        runOrFail("./tools/link_addons.sh > /dev/null")
 
     firstTimeSetup(p,c,results)
 
