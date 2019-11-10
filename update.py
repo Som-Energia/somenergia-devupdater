@@ -94,7 +94,6 @@ def background(command) :
         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
         process.wait()
 
-
 def baseRun(command, *args, **kwds):
     running(command, *args, **kwds)
     command = command.format(*args, **kwds)
@@ -118,8 +117,8 @@ def baseRun(command, *args, **kwds):
 
     import select
     poll = select.poll()
-    poll.register(process.stdout.fileno())
-    poll.register(process.stderr.fileno())
+    poll.register(process.stdout.fileno(), select.POLLIN)
+    poll.register(process.stderr.fileno(), select.POLLIN)
 
     while process.poll() is None:
         for fd, flags in poll.poll():
