@@ -59,7 +59,8 @@ def running(command, *args, **kwds) :
 
 def endrun(errorcode, outlines, errlines, mixlines):
     failed = errorcode != 0
-    outlines, errlines, mixlines = (u''.join(l) for l in (outlines, errlines, mixlines))
+    outlines, errlines, mixlines = (
+        u''.join(l) for l in (outlines, errlines, mixlines))
     if failed:
         progress.steps[-1].commands[-1].update(
             failed = True,
