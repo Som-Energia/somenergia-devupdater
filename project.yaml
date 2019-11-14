@@ -79,6 +79,7 @@ pipDependencies:
 - oopgrade # de la wiki
 - pypdftk # de la wiki
 - dm.xmlsec.binding
+- lxml==4.4.0 # 4.4.1 is not Py2 compatible, some package installs it if not present before
 
 
 pretasks:
