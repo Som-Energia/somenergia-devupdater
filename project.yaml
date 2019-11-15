@@ -179,6 +179,7 @@ repositories:
   user: Som-Energia
   tests:
   - nosetests
+  - back2back back2back.yaml
 
 
 editablePackages:
