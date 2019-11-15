@@ -329,13 +329,13 @@ def pipInstallUpgrade(packages, results):
 
 def missingPipPackages(required):
     installed = [
-	package.name
-	for package in pipPackages()
+        package.name
+        for package in pipPackages()
     ]
     return [
-	package
-	for package in required
-	if package not in installed
+        package
+        for package in required
+        if package not in installed
     ]
 
 ### Apt stuff
