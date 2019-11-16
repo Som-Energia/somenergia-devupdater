@@ -206,13 +206,14 @@ editablePackages:
 
 # somenergia
 - sermepa
+- somenergia-utils
 - plantmeter
 - somenergia-generationkwh
 - facturae
 - amoniak
 - orakwlum_client
 - CNMC-Client
-- somenergia-utils
+- somenergia-tomatic
 
 
 
