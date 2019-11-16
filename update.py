@@ -391,6 +391,7 @@ def loadDb(p):
         runOrFail("createdb {dbname}", **c)
         runOrFail("( pv -f {} | zcat | psql -e {dbname} ) 2>&1", backupfile, **c)
         runOrFail("""psql -d {dbname} -c "UPDATE res_partner_address SET email = '{email}'" """, **c)
+        runOrFail("{workingpath}/somenergia-utils/enable_destructive_tests.py",**c)
 
 
 def firstTimeSetup(p,c,results):
