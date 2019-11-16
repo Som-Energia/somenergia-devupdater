@@ -551,7 +551,7 @@ def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
     results=ns(
-        startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'")
+        startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'"),
         progress = progress,
     )
 
