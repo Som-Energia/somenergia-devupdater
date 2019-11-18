@@ -13,7 +13,7 @@ export PYTHONPATH=$SANDBOX/erp/server/sitecustomize/
 
 cd $SANDBOX/somenergia-devupdater
 
-echo Checking at $(date +"%Y-m-d-%H-%M-%S" ) | tee lastrun
+echo Checking at $(date +"%Y-%m-%d-%H-%M-%S" ) | tee lastrun
 
 eval `ssh-agent -s` 
 ssh-add
