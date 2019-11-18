@@ -20,7 +20,11 @@ blamer  ALL=(postgres) NOPASSWD: /home/blamer/sandbox/somenergia-devupdater/pgad
   ssh-keygen
   ssh-copy-id somdevel@sf5.somenergia.coop
   ```
-- Add the new key at `~/.ssh/id_rsa.pub` it to Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+- Add the new key at `~/.ssh/id_rsa.pub` it to GitHub Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+- Add the new key at `~/.ssh/id_rsa.pub` it to GitLab Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+- Do a ssh to anyuser@github.com, just accept the remote server key as valid and close
+- Do a ssh to anyuser@192.168.35.249 (gitlab), just accept the remote server key as valid and close
+
 
 ``` bash
 sudo apt install virtualenvwrapper git
@@ -41,6 +45,33 @@ Once configured just run, and wait... waiit.....
 ```bash
 ./update.py
 ```
+
+## Initial scenario
+
+
+- Deploy stage
+	- Install all missing apt packages (ubuntuDependencies)
+	- Install wkhtmltox apt
+	- Install all missing pip packages (pipDependencies)
+	- Clone all missing git repositories (repositories)
+	- Install as editable all python repositories that requires that (editablePackages)
+	- Upgrade all outdated pip packages (if skipPipUpgrade)
+	- Run `linkadons.sh`
+	- firstTimeSetup substage
+		- just if erp.conf does not exist
+		- create the log dir
+		- generate `erpserver` launcher
+		- generate `erp.conf`
+		- setup db users calling `pgadduser.sh`
+	- Download last db backup
+	- Remove existing db
+	- Restore last db backup
+	- Patch db for development (non-production flag, all emails set to a safe one...)
+- Update the erp
+- Run the erp in background while
+	- pass all test commands in `repositories`
+
+
 
 
 
