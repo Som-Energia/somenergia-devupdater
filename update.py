@@ -399,6 +399,7 @@ def firstTimeSetup(p,c,results):
     if somenergiaConf.exists(): return
 
     createLogDir(p,c,results)
+    generateErpRunner(p,c,results)
     generateErpConf(p,c,results)
     setupDBUsers(p,c,results)
 
@@ -565,7 +566,6 @@ def main(**kwds):
         pass
 
     with cd(c.workingpath):
-        generateErpRunner(p,c,results)
         deploy(p, results)
 
         if not c.skipErpUpdate:
