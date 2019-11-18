@@ -98,6 +98,8 @@ pretasks:
 
 repositories:
 # TODO: requires permisions from gisce
+- path: somenergia-back2backdata
+  url: git@192.168.35.249:IT/somenergia-back2backdata.git
 - path: libfacturacioatr
   url: git@github.com:gisce/libFacturacioATR.git
   #  url: https://github.com/gisce/libFacturacioATR.git
