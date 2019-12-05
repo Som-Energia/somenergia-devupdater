@@ -40,20 +40,38 @@ except ImportError:
 
 srcdir = Path(__file__).absolute().parent
 
-progress = ns(steps=[])
+progress = ns(stages=[])
+
+def currentStage():
+    if not progress.stages:
+        stage("Initial")
+    return progress.stages[-1]
+
+def currentStep():
+    if not currentStage().steps:
+        step("Initial")
+    return currentStage().steps[-1]
+
+def currentCommand():
+    return currentStep().commands[-1]
+
+def stage(description, *args, **kwds):
+    printStdError(color('34;1', "Stage: "+description, *args, **kwds))
+    progress.stages.append(ns(
+        name=description.format(*args,**kwds),
+        steps=[],
+    ))
 
 def step(description, *args, **kwds):
     _step(description, *args, **kwds)
-    progress.steps.append(ns(
+    currentStage().steps.append(ns(
         name=description.format(*args,**kwds),
         commands=[],
     ))
 
 def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
-    if not progress.steps:
-        step("Unnamed")
-    progress.steps[-1].commands.append(ns(
+    currentStep().commands.append(ns(
         command=command.format(*args, **kwds),
     ))
 
@@ -62,7 +80,7 @@ def endrun(errorcode, outlines, errlines, mixlines):
     outlines, errlines, mixlines = (
         u''.join(l) for l in (outlines, errlines, mixlines))
     if failed:
-        progress.steps[-1].commands[-1].update(
+        currentCommand().update(
             failed = True,
             output = u''.join(mixlines)
         )
@@ -182,6 +200,7 @@ def testRepositories(p, results):
     results.failures=ns()
     for repo in p.repositories:
         if 'tests' not in repo: continue
+        step("Testing {}", repo.path)
         with cd(repo.path):
             result = runTests(repo)
             results.failures[repo.path] = result
@@ -455,6 +474,7 @@ def waitErpOpen():
     return False
 
 def deploy(p, results):
+    stage("Deploy")
     if c.skipDeploy:
         warn("Deployment skipped")
         return
@@ -570,7 +590,9 @@ def main(**kwds):
     with cd(c.workingpath):
         deploy(p, results)
 
+        stage("Testing")
         if not c.skipErpUpdate:
+            step("Update Server")
             runOrFail('erpserver --update=all --stop-after-init')
 
         if not c.forceTest and not hasChanges(results):
@@ -579,6 +601,7 @@ def main(**kwds):
         if isErpPortOpen():
             fail("Another erp instance is using the port")
 
+        step("Server startup")
         with background('erpserver'):
             if not waitErpOpen():
                 fail("Erp took more than {} seconds to startup"
