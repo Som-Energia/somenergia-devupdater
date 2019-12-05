@@ -122,6 +122,8 @@ def baseRun(command, *args, **kwds):
 
     while process.poll() is None:
         for fd, flags in poll.poll():
+            if not (flags & select.POLLIN):
+                continue
             if fd == process.stdout.fileno():
                 doline(process.stdout.readline(), sys.stdout, outlines)
             if fd == process.stderr.fileno():
