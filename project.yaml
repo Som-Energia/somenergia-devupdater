@@ -173,13 +173,17 @@ repositories:
   user: Som-Energia
   tests:
   - ./setup.py test
+- path: somenergia-opendata
+  user: Som-Energia
+  tests:
+  - nosetests --force-color som_opendata
 - path: FACe_lib
 - path: FACe_signer
 - path: giscedata_facturacio_indexada_som
   user: Som-Energia
 - path: somenergia-tomatic
   user: Som-Energia
-  tests:
+  disabled_tests:
   - nosetests
   - back2back back2back.yaml
 
