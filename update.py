@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import time
 import socket
 import signal
+import datetime
 
 def checkInVirtualEnvironment():
     venv = os.environ.get('VIRTUAL_ENV',None)
@@ -73,12 +74,18 @@ def running(command, *args, **kwds) :
     printStdError(color('35;1', "Running: "+command, *args, **kwds))
     currentStep().commands.append(ns(
         command=command.format(*args, **kwds),
+        startTime=datetime.datetime.now(),
     ))
 
 def endrun(errorcode, outlines, errlines, mixlines):
     failed = errorcode != 0
     outlines, errlines, mixlines = (
         u''.join(l) for l in (outlines, errlines, mixlines))
+    terminationTime = datetime.datetime.now()
+    ellapsedSeconds = (terminationTime - currentCommand().startTime).seconds
+    currentCommand().update(
+        ellapsedSeconds=ellapsedSeconds,
+    )
     if failed:
         currentCommand().update(
             failed = True,
