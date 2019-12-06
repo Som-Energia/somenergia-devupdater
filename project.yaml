@@ -148,6 +148,10 @@ repositories:
 - path: somenergia-utils
   user: Som-Energia
 - path: facturae
+- path: FACe_lib
+- path: FACe_signer
+- path: giscedata_facturacio_indexada_som
+  user: Som-Energia
 - path: sermepa # webforms
   user: Som-Energia
   tests:
@@ -175,11 +179,8 @@ repositories:
 - path: somenergia-opendata
   user: Som-Energia
   tests:
+  - ./setup develop
   - nosetests --force-color som_opendata
-- path: FACe_lib
-- path: FACe_signer
-- path: giscedata_facturacio_indexada_som
-  user: Som-Energia
 - path: somenergia-tomatic
   user: Som-Energia
   disabled_tests:
