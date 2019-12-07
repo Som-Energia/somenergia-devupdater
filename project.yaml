@@ -178,8 +178,9 @@ repositories:
   - ./setup.py test
 - path: somenergia-opendata
   user: Som-Energia
+  branch: developer
   tests:
-  - ./setup develop
+  - ./setup.py develop
   - nosetests --force-color som_opendata
 - path: somenergia-tomatic
   user: Som-Energia
