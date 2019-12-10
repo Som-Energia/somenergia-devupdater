@@ -45,12 +45,12 @@ progress = ns(stages=[])
 
 def currentStage():
     if not progress.stages:
-        stage("Initial")
+        stage("Init")
     return progress.stages[-1]
 
 def currentStep():
     if not currentStage().steps:
-        step("Initial")
+        step("Init")
     return currentStage().steps[-1]
 
 def currentCommand():
@@ -520,6 +520,73 @@ def deploy(p, results):
         loadDb(p)
 
 
+def dumpTestfarmData(p,results):
+    if not c.get('testfarmDataDir'):
+        return
+
+    # Stages that report each step
+    detailedStages = p.get('detailedStages',[])
+    ignoredStages = p.get('ignoredStages',[])
+
+    now = '{:%Y/%m/%d %H:%M:%S}'.format(datetime.datetime.now())
+    executionName = results.startDate
+
+    report = ns(
+        project = "SomEnergia",
+        lastupdate = now,
+        clients = [],
+    )
+
+    def client(name, failedTasks, currentTask=''):
+        report.clients.append(ns(
+            name = name,
+            status='red' if failedTasks else 'green',
+            doing='run' if currentTask else 'wait', # also could be 'old'
+            lastupdate = now,
+            failedTasks = failedTasks,
+            currentTask = currentTask,
+        ))
+
+    for stage in results.progress.stages:
+        if stage.name in ignoredStages:
+            continue
+
+        if stage.name in detailedStages:
+            failures = []
+            for step in stage.steps:
+                failures = [
+                    command.command
+                    for command in step.commands
+                    if 'failed' in command
+                ]
+                client(
+                    name=step.name,
+                    failedTasks=failures,
+                )
+            continue
+
+        failures = [
+            step.name
+            for step in stage.steps
+            if any(
+                'failed' in command
+                for command in step.commands
+            )
+        ]
+        client(
+            name=stage.name,
+            failedTasks=failures,
+        )
+
+    import json
+    jsondata = json.dumps(report,
+        indent=4,
+        sort_keys=True,
+        )
+    outputfile=Path(c.testfarmDataDir)/'testfarm-data.js'
+    outputfile.write_bytes(jsondata)
+
+
 
 def completeRepoData(repository):
     repository.setdefault('branch', 'master')
@@ -580,8 +647,9 @@ c.update(**ns.load("config.yaml"))
 def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
+
     results=ns(
-        startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'"),
+        startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'").strip(),
         progress = progress,
     )
 
@@ -597,13 +665,13 @@ def main(**kwds):
     with cd(c.workingpath):
         deploy(p, results)
 
+        if not c.forceTest and not hasChanges(results):
+            raise Exception("No changes")
+
         stage("Testing")
         if not c.skipErpUpdate:
             step("Update Server")
             runOrFail('erpserver --update=all --stop-after-init')
-
-        if not c.forceTest and not hasChanges(results):
-            raise Exception("No changes")
 
         if isErpPortOpen():
             fail("Another erp instance is using the port")
@@ -618,6 +686,7 @@ def main(**kwds):
 
     results.dump("results.yaml")
     print(summary(results))
+    dumpTestfarmData(p,results)
 
     if results.failures:
         sys.exit(-1)

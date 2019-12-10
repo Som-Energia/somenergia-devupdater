@@ -231,6 +231,10 @@ postgresUsers:
 - readonly
 
 
+detailedStages: # Stages that report each step in summary
+- Testing
+ignoredStages:
+- Init
 
 
 # vim: ts=2 et sw=2
