@@ -12,5 +12,7 @@ export LANG="en_US.UTF-8"
 export PYTHONIOENCODING="UTF-8"
 export PYTHONPATH="$SOMENERGIA_SRC/erp/server/sitecustomize"
 
+( cd $SOMENERGIA_SRC/erp
 $SOMENERGIA_SRC/erp/server/bin/openerp-server.py --no-netrpc --price_accuracy=6 -d {dbname} --config=$VIRTUAL_ENV/conf/erp.conf --port={erpport} "$@"
+)
 
