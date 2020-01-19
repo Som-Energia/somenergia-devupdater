@@ -599,7 +599,6 @@ c = ns(
     workingpath='.',
     email='someone@somewhere.net',
     dbname='somenergia',
-    pgversion='10',
     erpport=18069,
     skipPipUpgrade = True,
     forceTest = False,
