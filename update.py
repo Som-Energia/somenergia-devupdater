@@ -372,7 +372,7 @@ def missingPipPackages(required):
 def aptInstall(packages):
     packages=' '.join(packages)
     step("Installing debian dependencies: {}",packages)
-    runOrFail("sudo apt install {}", packages)
+    runOrFail("sudo apt install -y {}", packages)
 
 def missingAptPackages(packages):
     step("Checking missing debian packages")
