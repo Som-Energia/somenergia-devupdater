@@ -19,9 +19,9 @@ ubuntuDependencies:
 - fontconfig
 - libfontconfig1
 - xfonts-75dpi
-# Opendata dependencies
-- libmagickwand-dev
-- inkscape
+- libmagickwand-dev # Required by opendata -> python-wand
+- inkscape # Required by opendata -> python-wand
+- cargo # Required by sentry -> semaphore
 
 predeploy: # TODO: Not used yet, see installCustomPdfGenerator
 - mkvirtualenv -p $(which python2) --system-site-packages erp
