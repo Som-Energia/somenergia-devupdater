@@ -276,29 +276,55 @@ def clone(repository):
     runOrFail("git clone {url} {path} --branch {branch}",**repository)
 
 
+def fetchOrCloneRepository(repo):
+    if not os.path.exists(repo.path):
+        step("Cloning {path}", **repo)
+        clone(repo)
+        return repo.path, ['Cloned']
+    step("Fetching changes {path}",**repo)
+    with cd(repo.path):
+        fetch()
+        branch = currentBranch()
+        if branch != repo.branch:
+            warn("Not rebasing repo '{path}': "
+                "in branch '{currentBranch}' instead of '{branch}'",
+                currentBranch=branch, **repo)
+            return repo.path, []
+        repoChanges = newCommitsFromRemote(repo)
+        return repo.path, repoChanges
+
+
 def cloneOrUpdateRepositories(p, results):
+    if c.fetchingProcesses>1:
+        warn("Repos will be fetched {} at a time to speedup, expect mixed output".format(c.fetchingProcesses))
+        from multiprocessing import Pool
+        changes = results.setdefault('changes',ns())
+        changes.update(
+            x for x in Pool(c.fetchingProcesses).imap_unordered(fetchOrCloneRepository, p.repositories)
+            if x[1])
+        warn("End of mixed repos fetch")
+        return
+    for repo in p.repositories:
+        fetchOrCloneRepository(repo)
+
+def rebaseRepositories(p, results):
     changes = results.setdefault('changes',ns())
     for repo in p.repositories:
         if not os.path.exists(repo.path):
-            changes[repo.path] = [] # TODO: log cloned
-            step("Cloning {path}", **repo)
-            clone(repo)
-            continue
+            raise Exception("Repo {} missing")
+        step("Updating repo {path}",**repo)
         with cd(repo.path):
-            step("Fetching changes {path}",**repo)
-            fetch()
             branch = currentBranch()
             if branch != repo.branch:
                 warn("Not rebasing repo '{path}': "
                     "in branch '{currentBranch}' instead of '{branch}'",
                     currentBranch=branch, **repo)
                 continue
-            repoChanges = newCommitsFromRemote(repo)
-            if not repoChanges: continue
-            changes[repo.path] = repoChanges
+            if not changes.get(repo.path, None):
+                warn("No changes detected")
+                continue
             step("Rebasing {path}",**repo)
             rebase()
-    return changes
 
 
 ## Pip stuff
@@ -499,6 +525,12 @@ def deploy(p, results):
 
     cloneOrUpdateRepositories(p, results)
 
+    if not hasChanges(results) and not c.forceTest:
+        warn("No changes detected, exiting")
+        return
+
+    rebaseRepositories(p, results)
+
     if c.skipPipUpgrade:
         warn("Skiping pip editables install")
     else:
@@ -610,6 +642,8 @@ c = ns(
     virtualenvdir = os.environ.get('VIRTUAL_ENV'),
     systemUser = os.environ.get('USER'),
     erpStartupTimeout = 30,
+    fetchingProcesses = 10,
+    upgradePipPackages=False,
 )
 c.update(**ns.load("config.yaml"))
 
