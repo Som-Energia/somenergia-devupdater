@@ -531,9 +531,11 @@ def deploy(p, results):
     if c.upgradePipPackages:
         pipInstallUpgrade(pendingPipUpgrades(), results)
 
+    # TODO: on deploy, add both gisce and som rolling remotes
+
     cloneOrUpdateRepositories(p, results)
 
-    if not hasChanges(results) and not c.forceTest:
+    if not hasChanges(results) and not c.runUnchanged:
         warn("No changes detected, exiting")
         return
 
@@ -545,8 +547,6 @@ def deploy(p, results):
         # TODO: Just the ones updated or cloned
         for path in p.editablePackages:
             installEditable(path)
-
-    # TODO: on deploy, add both gisce and som rolling remotes
 
     # TODO: Just a first time or if one repo is cloned
     with cd('erp'):
@@ -641,7 +641,7 @@ c = ns(
     dbname='somenergia',
     erpport=18069,
     skipPipUpgrade = True,
-    forceTest = False,
+    runUnchanged = False,
     keepDatabase = False,
     forceDownload = False,
     reuseBackup = False,
@@ -689,6 +689,10 @@ c.update(**ns.load("config.yaml"))
     help='Upgrade any pip package with a newer but compatible version available',
     is_flag=True,
     )
+@click.option('--rununchanged', 'runUnchanged',
+    help='Proceed even if no changes are detected in repositories',
+    is_flag=True,
+    )
 def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
@@ -710,7 +714,7 @@ def main(**kwds):
     with cd(c.workingpath):
         deploy(p, results)
 
-        if not c.forceTest and not hasChanges(results):
+        if not c.runUnchanged and not hasChanges(results):
             raise Exception("No changes")
 
         stage("Testing")

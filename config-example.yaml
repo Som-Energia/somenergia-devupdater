@@ -13,4 +13,4 @@ empoweringCompany: '9993331111'
 #keepDatabase: True # Do not reload the db if it exists
 #reuseBackup: True # Uses the oldest local tarball to update de db
 #forceDownload: True # Even if the local db backup exists download it
-#forceTest: True # Run tests even if no changes detected
+#runUnchanged: True # Run tests even if no changes detected
