@@ -9,6 +9,7 @@ empoweringCompany: '9993331111'
 
 #skipDeploy: True # Just run the tests
 #skipPipUpgrade: True # Do not upgrade Python packages
+#upgradePipPackages: True # Upgrade any pip package with a new compatible version available
 #keepDatabase: True # Do not reload the db if it exists
 #reuseBackup: True # Uses the oldest local tarball to update de db
 #forceDownload: True # Even if the local db backup exists download it

@@ -334,6 +334,22 @@ def installEditable(path):
     with cd(path):
         runOrFail("pip install -e .")
 
+def missingPipRequirements(required):
+    # TODO: should use pip installed packaging, no pkg_resources private copy
+    from pkg_resources._vendor.packaging.utils import canonicalize_name as canon
+    from pkg_resources._vendor.packaging.requirements import Requirement
+    import pkg_resources
+    installedVersions = dict(
+        (canon(p.key), p.parsed_version)
+        for p in pkg_resources.working_set
+    )
+    return [
+        str(r)
+        for r in (Requirement(p) for p in required)
+        if canon(r.name) not in installedVersions
+        or installedVersions[canon(r.name)] not in r.specifier
+    ]
+
 def pipPackages():
     """
     Returns a list of namespaces, containing information
@@ -380,17 +396,6 @@ def pipInstallUpgrade(packages, results):
 
     packages = ' '.join(["'{}'".format(x) for x in packages])
     runOrFail('pip install --upgrade {}', packages)
-
-def missingPipPackages(required):
-    installed = [
-        package.name
-        for package in pipPackages()
-    ]
-    return [
-        package
-        for package in required
-        if package not in installed
-    ]
 
 ### Apt stuff
 
@@ -518,9 +523,12 @@ def deploy(p, results):
     if missingAptPackages(['wkhtmltox']):
         installCustomPdfGenerator()
 
-    if missingPipPackages(p.pipDependencies):
-        pipInstallUpgrade(p.pipDependencies, results)
-    elif not c.skipPipUpgrade:
+    missingPip = missingPipRequirements(p.pipDependencies)
+    if missingPip:
+        warn("Missing pip packages: {}", missingPip)
+        pipInstallUpgrade(missingPip, results)
+
+    if c.upgradePipPackages:
         pipInstallUpgrade(pendingPipUpgrades(), results)
 
     cloneOrUpdateRepositories(p, results)
@@ -675,6 +683,10 @@ c.update(**ns.load("config.yaml"))
     )
 @click.option('--skiperpupdate', 'skipErpUpdate',
     help='Do not run update on erp modules to speedup execution when no modules have been updated',
+    is_flag=True,
+    )
+@click.option('--upgradepip', 'upgradePipPackages',
+    help='Upgrade any pip package with a newer but compatible version available',
     is_flag=True,
     )
 def main(**kwds):
