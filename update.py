@@ -402,7 +402,7 @@ def pipInstallUpgrade(packages, results):
 
 def aptInstall(packages):
     packages=' '.join(packages)
-    step("Installing debian dependencies: {}",packages)
+    step("Installing missing debian dependencies: {}",packages)
     runOrFail("sudo apt install -y {}", packages)
 
 def missingAptPackages(packages):
