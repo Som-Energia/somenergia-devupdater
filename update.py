@@ -382,7 +382,7 @@ def pendingPipUpgrades():
         p
         for p in pipPackages()
         if version(p.old)<version(p.new)
-        and ('path' not in p or not p.path)
+        and not p.get('path', None)
         ]
 
 def pipInstallUpgrade(packages, results):
