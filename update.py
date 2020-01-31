@@ -715,12 +715,14 @@ def main(**kwds):
         deploy(p, results)
 
         if not c.runUnchanged and not hasChanges(results):
-            raise Exception("No changes")
+            error("No changes detected, run with --rununchanged to proceed anyway")
+            sys.exit(0)
+
 
         stage("Testing")
         if not c.skipErpUpdate:
             step("Update Server")
-            runOrFail('erpserver --update=all --stop-after-init')
+            runOrFail('erpserver --update=all --stop-after-init --logfile=""')
 
         if isErpPortOpen():
             fail("Another erp instance is using the port")
