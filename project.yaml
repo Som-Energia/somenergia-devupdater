@@ -117,6 +117,7 @@ repositories:
 - path: aeroolib
   branch: openerp5
 - path: mongodb_backend
+  branch: gisce
 - path: oorq
   branch: api_v5
 - path: ooquery
