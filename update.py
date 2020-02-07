@@ -368,7 +368,7 @@ def pipPackages():
             type=pkg,
             **ns(path=path) if path else ns()
         )
-        for package, old, new, pkg, path in 
+        for package, old, new, pkg, path in
         (
             line.split()+['']*(5-len(line.split()))
             for line in lines[2:]
@@ -664,38 +664,47 @@ c.update(**ns.load("config.yaml"))
 @click.option('--skipdeploy', 'skipDeploy',
     help='Skips initial deployment altogether',
     is_flag=True,
+    default=None,
     )
 @click.option('--skippip', 'skipPipUpgrade',
     help='Skips upgrading the pip packages',
     is_flag=True,
+    default=None,
     )
 @click.option('--keepdb', 'keepDatabase',
     help='Keeps the existing database unless it does not exist',
     is_flag=True,
+    default=None,
     )
 @click.option('--reusebackup', 'reuseBackup',
     help='Skips database backup download and reuses the last one',
     is_flag=True,
+    default=None,
     )
 @click.option('--forcedownload', 'forceDownload',
     help="Forces the database backup download even if a local copy exists already",
     is_flag=True,
+    default=None,
     )
 @click.option('--skiperpupdate', 'skipErpUpdate',
     help='Do not run update on erp modules to speedup execution when no modules have been updated',
     is_flag=True,
+    default=None,
     )
 @click.option('--upgradepip', 'upgradePipPackages',
     help='Upgrade any pip package with a newer but compatible version available',
     is_flag=True,
+    default=None,
     )
 @click.option('--rununchanged', 'runUnchanged',
     help='Proceed even if no changes are detected in repositories',
     is_flag=True,
+    default=None,
     )
 def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
+
 
     results=ns(
         startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'").strip(),
