@@ -564,6 +564,8 @@ def dumpTestfarmData(p,results):
     if not c.get('testfarmDataDir'):
         return
 
+    results.dump(Path(c.testfarmDataDir)/'{execution}-execution.yaml'.format(c))
+
     # Stages that report each step
     detailedStages = p.get('detailedStages',[])
     ignoredStages = p.get('ignoredStages',[])
@@ -657,6 +659,10 @@ c.update(**ns.load("config.yaml"))
 
 
 @click.command(help="Executes a build setup/update of the erp")
+@click.option('--execname','name',
+    metavar='EXECNAME',
+    help='Execution name',
+    )
 @click.option('--db','dbname',
     metavar='DATABASE',
     help='Name of the database',
@@ -705,9 +711,11 @@ def main(**kwds):
     c.update((k,v) for k,v in kwds.items() if v is not None)
     print(c.dump())
 
+    now = "{:%Y%m%d-%H%M%S}".format(datetime.datetime.utcnow())
 
     results=ns(
-        startDate=captureOrFail("date -u  +'%Y-%m-%d-%H-%M-%S'").strip(),
+        execution = c.get('execname', now),
+        startDate = now,
         progress = progress,
     )
 
@@ -721,35 +729,36 @@ def main(**kwds):
         pass
 
     with cd(c.workingpath):
-        deploy(p, results)
+        try:
+            deploy(p, results)
 
-        if not c.runUnchanged and not hasChanges(results):
-            error("No changes detected, run with --rununchanged to proceed anyway")
-            sys.exit(0)
+            if not c.runUnchanged and not hasChanges(results):
+                error("No changes detected, run with --rununchanged to proceed anyway")
+                sys.exit(0)
 
 
-        stage("Testing")
-        if not c.skipErpUpdate:
-            step("Update Server")
-            runOrFail('erpserver --update=all --stop-after-init --logfile=""')
+            stage("Testing")
+            if not c.skipErpUpdate:
+                step("Update Server")
+                runOrFail('erpserver --update=all --stop-after-init --logfile=""')
 
-        if isErpPortOpen():
-            fail("Another erp instance is using the port")
+            if isErpPortOpen():
+                fail("Another erp instance is using the port")
 
-        step("Server startup")
-        with background('erpserver'):
-            if not waitErpOpen():
-                fail("Erp took more than {} seconds to startup"
-                    .format(c.erpStartupTimeout))
+            step("Server startup")
+            with background('erpserver'):
+                if not waitErpOpen():
+                    fail("Erp took more than {} seconds to startup"
+                        .format(c.erpStartupTimeout))
 
-            testRepositories(p, results)
+                testRepositories(p, results)
+        finally:
+            results.dump("results.yaml")
+            #print(summary(results))
+            dumpTestfarmData(p,results)
 
-    results.dump("results.yaml")
-    print(summary(results))
-    dumpTestfarmData(p,results)
-
-    if results.failures:
-        sys.exit(-1)
+            if results.failures:
+                sys.exit(-1)
 
 
 
