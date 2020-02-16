@@ -564,14 +564,13 @@ def dumpTestfarmData(p,results):
     if not c.get('testfarmDataDir'):
         return
 
-    results.dump(Path(c.testfarmDataDir)/'{execution}-execution.yaml'.format(c))
+    results.dump(Path(c.testfarmDataDir)/'{execution}-execution.yaml'.format(results))
 
     # Stages that report each step
     detailedStages = p.get('detailedStages',[])
     ignoredStages = p.get('ignoredStages',[])
 
     now = '{:%Y/%m/%d %H:%M:%S}'.format(datetime.datetime.now())
-    executionName = results.startDate
 
     report = ns(
         project = "SomEnergia",
