@@ -564,7 +564,7 @@ def dumpTestfarmData(p,results):
     if not c.get('testfarmDataDir'):
         return
 
-    results.dump(Path(c.testfarmDataDir)/'{execution}-execution.yaml'.format(results))
+    results.dump(Path(c.testfarmDataDir)/'{execution}-execution.yaml'.format(**results))
 
     # Stages that report each step
     detailedStages = p.get('detailedStages',[])
