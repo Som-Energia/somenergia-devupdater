@@ -745,7 +745,7 @@ def main(**kwds):
             error("No changes detected, run with --rununchanged to proceed anyway")
             sys.exit(0)
 
-        try
+        try:
             stage("Testing")
             if not c.skipErpUpdate:
                 step("Update Server")
