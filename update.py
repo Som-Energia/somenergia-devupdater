@@ -299,10 +299,13 @@ def cloneOrUpdateRepositories(p, results):
         warn("Repos will be fetched {} at a time to speedup, expect mixed output".format(c.fetchingProcesses))
         from multiprocessing import Pool
         changes = results.setdefault('changes',ns())
+        workers = Pool(c.fetchingProcesses)
         changes.update(
-            x for x in Pool(c.fetchingProcesses).imap_unordered(fetchOrCloneRepository, p.repositories)
-            if x[1])
+            (path, pathchanges)
+            for path,pathchanges in workers.imap_unordered(fetchOrCloneRepository, p.repositories)
+            if pathchanges)
         warn("End of mixed repos fetch")
+        workers.close()
         return
     for repo in p.repositories:
         fetchOrCloneRepository(repo)
