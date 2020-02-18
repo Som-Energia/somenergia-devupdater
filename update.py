@@ -565,7 +565,7 @@ def dumpTestfarmData(p,results):
         return
 
     executionFile = Path(c.testfarmDataDir) / '{execution}-execution.yaml'.format(**results)
-    results.dump(str(execution))
+    results.dump(str(executionFile))
 
     # Stages that report each step
     detailedStages = p.get('detailedStages',[])
