@@ -457,13 +457,10 @@ def loadDb(p):
 
 
 def firstTimeSetup(p,c,results):
-    somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
-    if somenergiaConf.exists(): return
-
     createLogDir(p,c,results)
+    setupDBUsers(p,c,results)
     generateErpRunner(p,c,results)
     generateErpConf(p,c,results)
-    setupDBUsers(p,c,results)
 
 def createLogDir(p,c,results):
     logdir = Path(c.virtualenvdir)/'var/log'
@@ -555,7 +552,9 @@ def deploy(p, results):
     with cd('erp'):
         runOrFail("./tools/link_addons.sh > /dev/null")
 
-    firstTimeSetup(p,c,results)
+    somenergiaConf = Path(c.virtualenvdir)/'conf/erp.conf'
+    if not somenergiaConf.exists():
+        firstTimeSetup(p,c,results)
 
     if dbExists(c.dbname) and c.keepDatabase:
         warn("Keeping existing database")
@@ -734,12 +733,19 @@ def main(**kwds):
     with cd(c.workingpath):
         try:
             deploy(p, results)
+        finally:
+            results.dump("results.yaml")
+            #print(summary(results))
+            dumpTestfarmData(p,results)
 
-            if not c.runUnchanged and not hasChanges(results):
-                error("No changes detected, run with --rununchanged to proceed anyway")
-                sys.exit(0)
+            if results.get('failures', None):
+                sys.exit(-1)
 
+        if not c.runUnchanged and not hasChanges(results):
+            error("No changes detected, run with --rununchanged to proceed anyway")
+            sys.exit(0)
 
+        try
             stage("Testing")
             if not c.skipErpUpdate:
                 step("Update Server")
@@ -760,7 +766,7 @@ def main(**kwds):
             #print(summary(results))
             dumpTestfarmData(p,results)
 
-            if results.failures:
+            if results.get('failures', None):
                 sys.exit(-1)
 
 
