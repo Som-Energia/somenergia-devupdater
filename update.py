@@ -427,19 +427,21 @@ def installCustomPdfGenerator():
 
 def downloadLastBackup():
     backupfile = None
+    yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
+
     if c.reuseBackup:
         for backupfile in sorted(Path(c.workingpath).glob('somenergia-*.sql.gz')):
             break
+
     if not backupfile:
-        import datetime
-        yesterday = format((datetime.datetime.now()-datetime.timedelta(days=1)).date())
         backupfile = Path("somenergia-{}.sql.gz".format(yesterday))
 
     if backupfile.exists() and not c.forceDownload:
         warn("Reusing already downloaded '{}'", backupfile)
         return backupfile
 
-    runOrFail("scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz {}", backupfile)
+    remotefile = Path("/mnt/backups/postgres/sp2.{:%Y%m%d}.sql.gz".format(yesterday))
+    runOrFail("scp somdevel@sp2:{} {}", remotefile, backupfile)
     return backupfile
 
 def dbExists(dbname):

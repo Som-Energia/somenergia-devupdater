@@ -88,7 +88,7 @@ pipDependencies:
 pretasks:
 - updateDatabase:
   # Download
-  - scp somdevel@sf5.somenergia.coop:/var/backup/somenergia.sql.gz somenergia-$(date -I -d yesterday).sql.gz
+  - scp somdevel@sp2:/mnt/backups/postgres/sp2.$(date '%Y%m%d' -d yesterday ).sql.gz somenergia-$(date -I -d yesterday).sql.gz
   # Backup old database
   - echo ALTER DATABASE somenergia RENAME TO somenergia_$(ls somenergia-*.sql.gz | tail -n1 | sed 's/somenergia-\(....-..-..\).sql.gz/\1/' |  sed s/-//g; )  | psql
   # Load new database

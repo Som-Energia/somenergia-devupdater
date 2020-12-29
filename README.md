@@ -18,10 +18,10 @@ blamer  ALL=(postgres) NOPASSWD: /home/blamer/sandbox/somenergia-devupdater/pgad
 - Create a passwordless ssh key:
   ```bash
   ssh-keygen
-  ssh-copy-id somdevel@sf5.somenergia.coop
+  ssh-copy-id somdevel@sp2
   ```
-- Add the new key at `~/.ssh/id_rsa.pub` it to GitHub Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
-- Add the new key at `~/.ssh/id_rsa.pub` it to GitLab Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+- Add the new key at `~/.ssh/id_rsa.pub` it to **GitHub** Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
+- Add the new key at `~/.ssh/id_rsa.pub` it to **GitLab** Avatar Icon/Setting/SSH and GPG Keys in the SSH section.
 - Do a ssh to anyuser@github.com, just accept the remote server key as valid and close
 - Do a ssh to anyuser@192.168.35.249 (gitlab), just accept the remote server key as valid and close
 
